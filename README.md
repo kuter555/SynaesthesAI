@@ -1,1 +1,1 @@
-# SynaesthesAI
+Final year project. Using VQ-VAE
