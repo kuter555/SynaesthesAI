@@ -1,5 +1,5 @@
 import numpy as np
-from networks import Encoder, Decoder
+from models.networks import Encoder, Decoder
 
 from torch import nn
 from torch import optim

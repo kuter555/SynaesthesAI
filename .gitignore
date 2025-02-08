@@ -2,6 +2,11 @@
 .outputs
 .venv
 Music.csv
+<<<<<<< HEAD
 __pycache__/*
 errors.txt
 vae
+=======
+__pycache__
+errors.txt
+>>>>>>> e65d15ba1b29a4b385318f2aa655598137045ce3
