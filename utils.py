@@ -1,8 +1,5 @@
 import sys
 
-
-
-
 def print_progress_bar(epoch, iteration, total, length=50):
     progress = int(length * iteration / total)
     if epoch != -1:

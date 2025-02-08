@@ -14,7 +14,7 @@ class cover_art_downloader:
 
     def __init__(self, titles, artists, image_urls):
                 
-        lim = 1200
+        lim = 10000
         self.folder_path = ".downloaded_images"
         makedirs(self.folder_path, exist_ok=True)
         self.titles = titles[:lim]
