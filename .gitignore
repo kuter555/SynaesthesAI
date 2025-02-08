@@ -1,0 +1,6 @@
+.downloaded_images
+.outputs
+.venv
+Music.csv
+__pycache_
+errors.txt

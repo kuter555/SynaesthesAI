@@ -5,28 +5,61 @@ from torch import optim
 
 from torchvision import transforms
 from torchvision import datasets
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
+
+import matplotlib.pyplot as plt
+import os
+from PIL import Image
+import numpy as np
 
 from vqvae import VAE
-import matplotlib.pyplot as plt
+from utils import print_progress_bar
 
-import sys
-
-
-def print_progress_bar(epoch, iteration, total, length=50):
-    progress = int(length * iteration / total)
-    bar = f"\033[31m Epoch {epoch}:\033[97m [{'=' * progress}{' ' * (length - progress)}] {int(100 * iteration / total)}%"
-    sys.stdout.write(f"\r{bar}")
-    sys.stdout.flush()
+class CustomImageFolder(Dataset):
+    def __init__(self, root_dir):
+        self.root_dir = root_dir
+        self.image_files = []
+        
+        self.transform =  transforms.Compose([
+            transforms.Resize((128, 128)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        
+        # Supported image extensions
+        self.valid_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif'}
+        
+        # Collect all valid image files
+        for root, dirs, files in os.walk(root_dir):
+            for file in files:
+                if any(file.lower().endswith(ext) for ext in self.valid_extensions):
+                    self.image_files.append(os.path.join(root, file))
+        
+    def __len__(self):
+        return len(self.image_files)
     
-    
+    def __getitem__(self, idx):
+        image_path = self.image_files[idx]
+        image = Image.open(image_path).convert("RGB")  # Open image and ensure it's RGB
+        
+        if self.transform:
+            image = self.transform(image)
+        
+        return image, 0  # We don't need labels for VAE (return dummy label 0)
+
+
+
+
+
 
 
 def train_vae(load=False):
     
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,),(0.5,))])
-    dataset = datasets.CIFAR100(root=r"./.cifar100-data", train=True, transform=transform, download=True)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    #transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,),(0.5,))])
+    #dataset = datasets.CIFAR100(root=r"./.cifar100-data", train=True, transform=transform, download=True)
+    #dataloader = DataLoader(dataset, batch_size=32, shuffle=True)    
+    dataset = CustomImageFolder(".downloaded_images")
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
     
     model = VAE()
     if(load):
@@ -55,37 +88,31 @@ def train_vae(load=False):
             optimiser.step()
             
             # Display images every 500 batches
-            if i % 500 == 0:
+            if i % 100 == 0:
                 with torch.no_grad():
-
                     stored_figures.append([images[0].cpu().numpy().squeeze(), recon_images[0].cpu().numpy().squeeze()])
             
             
-        # display results
-        fig, axes = plt.subplots(len(stored_figures), 2, figsize=(6, 3 * len(stored_figures)))
         for k in range(len(stored_figures)):
-                        
             # Original Image
             orig_img = stored_figures[k][0]
-            orig_img = orig_img.transpose(1,2,0)
-            axes[k][0].imshow(orig_img)
-            axes[k][0].set_title("Original")
-            axes[k][0].axis("off")
-
-
-            # Reconstructed Image
-            recon_img = stored_figures[k][1]
-            recon_img = recon_img.transpose(1,2,0)
-            axes[k][1].imshow(recon_img)
-            axes[k][1].set_title("Reconstructed")
-            axes[k][1].axis("off")
+            orig_img = orig_img.transpose(1, 2, 0)  # Convert from CHW to HWC format
+    
+            # Convert numpy array to PIL Image and save as PNG
+            orig_img_pil = Image.fromarray((orig_img * 255).astype(np.uint8))  # Assuming pixel values are normalized between 0 and 1
+            orig_img_pil.save(f"{epoch}_original_{k}.png")
             
-        plt.tight_layout()
-        plt.savefig(rf".images/output_{epoch}.png", bbox_inches="tight")
-        plt.close(fig)
+            recon_img = stored_figures[k][1]
+            recon_img = recon_img.transpose(1, 2, 0)  # Convert from CHW to HWC format
+    
+            # Convert numpy array to PIL Image and save as PNG
+            recon_img = Image.fromarray((recon_img * 255).astype(np.uint8))  # Assuming pixel values are normalized between 0 and 1
+            recon_img.save(f"{epoch}_recon_{k}.png")
+            
             
     torch.save(model.state_dict(), "vae")
     
+    
 if __name__ == "__main__":
-    train_vae(False)
+    train_vae(True)
     input("\nPress Enter to exit...")
