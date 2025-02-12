@@ -29,8 +29,8 @@ class VAE(nn.Module):
         
         super().__init__()      
         
-        latent_dim = 64
-        flatten_dim = latent_dim * 64 * 64
+        latent_dim = 128
+        flatten_dim = 1024 * 8 * 8
         
         self.encoder = Encoder(latent_dim=latent_dim)
         
