@@ -22,18 +22,20 @@ class Encoder(nn.Module):
 # https://www.geeksforgeeks.org/create-model-using-custom-module-in-pytorch/
 class Decoder(nn.Module):
     
-    def __init__(self, output_dim=3, latent_dim=8):
+    def __init__(self, output_dim=3, latent_dim=64):
         super(Decoder, self).__init__()
         
-        self.fc = nn.Linear(latent_dim, 8 * 64 * 64)
+        self.latent_dim = latent_dim
+        flatten_dim=latent_dim*64*64
+        
+        self.fc = nn.Linear(latent_dim, flatten_dim)
         self.tpconv1 = nn.ConvTranspose2d(latent_dim, 32, kernel_size=4, stride=2, padding=1)
         self.tpconv2 = nn.ConvTranspose2d(32, output_dim, kernel_size=4, stride=2, padding=1)
     
     def forward(self, x):
         x = self.fc(x)
-        x = x.view(-1, 8, 64, 64)
+        x = x.view(-1, self.latent_dim, 64, 64)
         x = functional.relu(self.tpconv1(x))
-        
         x = torch.sigmoid(self.tpconv2(x))
         
         return x

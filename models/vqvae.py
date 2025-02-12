@@ -29,7 +29,7 @@ class VAE(nn.Module):
         
         super().__init__()      
         
-        latent_dim = 8
+        latent_dim = 64
         flatten_dim = latent_dim * 64 * 64
         
         self.encoder = Encoder(latent_dim=latent_dim)
