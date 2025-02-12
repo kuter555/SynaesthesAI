@@ -36,7 +36,7 @@ def train_vae(load=False):
     
     optimiser = optim.Adam(model.parameters(), lr=1e-4)
     
-    for epoch in range(10):
+    for epoch in range(100):
         
         stored_figures= []  
         for i, (images, _) in enumerate(dataloader):
