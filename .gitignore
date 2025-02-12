@@ -1,7 +1,6 @@
 .downloaded_images
 .outputs
 .venv
-Music.csv
 __pycache__/*
 errors.txt
 vae
