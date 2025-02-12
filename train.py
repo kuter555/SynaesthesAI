@@ -24,7 +24,7 @@ def loss_function(x, x_hat, mean, log_var):
 
 
 
-def train_vae(load=False):
+def train_vae(epochs=10, load=False):
     
     folder_name = ".outputs/"
     dataset = CustomImageFolder(".downloaded_images")
@@ -36,7 +36,7 @@ def train_vae(load=False):
     
     optimiser = optim.Adam(model.parameters(), lr=1e-4)
     
-    for epoch in range(100):
+    for epoch in range(epochs):
         
         stored_figures= []  
         for i, (images, _) in enumerate(dataloader):
@@ -81,5 +81,13 @@ def train_vae(load=False):
     
     
 if __name__ == "__main__":
-    train_vae(load=False)
+    load = input("Load existing model? (y/n): ")
+    load = False if load.strip().lower() == "n" else True
+    epochs = input("Please enter number of epochs: ")
+    try:
+        epochs = int(epochs)
+    except:
+        print("Invalid input - Defaulting to 10 Epochs")
+        epochs = 10    
+    train_vae(epochs=epochs, load=load)
     input("\nPress Enter to exit...")
