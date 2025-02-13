@@ -4,3 +4,4 @@
 __pycache__/*
 errors.txt
 vae
+models/__pycache__/*
