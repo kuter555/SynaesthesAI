@@ -5,23 +5,18 @@ from torch import optim
 from PIL import Image
 import numpy as np
 
-from models.vqvae import VAE
+from models.vqvae import VQVAE
 from utils import print_progress_bar, CustomImageFolder
 
 
 def deconvolve(x):
-    
     return ((x * 0.5) + 0.5).clip(0, 1)
+
+
+def loss_function(x, x_hat, codebook_loss):
     
-
-
-def loss_function(x, x_hat, mean, log_var):
-    
-    # get the losses
-    reproduction_loss = functional.binary_cross_entropy(x_hat, x, reduction='sum')
-    KLD = - 0.5 * torch.sum(1+ log_var - mean.pow(2) - log_var.exp())
-    return reproduction_loss + KLD
-
+    reproduction_loss = functional.binary_cross_entropy(x_hat, x, reduction='sum') # normal loss function
+    return reproduction_loss + codebook_loss
 
 
 def train_vae(epochs=10, load=False):
@@ -30,7 +25,7 @@ def train_vae(epochs=10, load=False):
     dataset = CustomImageFolder(".downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
     
-    model = VAE()
+    model = VQVAE()
     if(load):
         model.load_state_dict(torch.load("vae", weights_only=True))
     
@@ -50,8 +45,8 @@ def train_vae(epochs=10, load=False):
             # actual training    
             optimiser.zero_grad()
             
-            recon_images, mean, var = model(images)
-            recon_loss = loss_function(deconvolve(images), recon_images, mean, var)
+            recon_images, codebook_loss = model(images)
+            recon_loss = loss_function(deconvolve(images), recon_images, codebook_loss)
             recon_loss.backward()
             optimiser.step()
             
@@ -67,14 +62,13 @@ def train_vae(epochs=10, load=False):
             orig_img = deconvolve(orig_img).transpose(1, 2, 0)  # Convert from CHW to HWC format
     
             # Convert numpy array to PIL Image and save as PNG
-            orig_img_pil = Image.fromarray((orig_img * 255).astype(np.uint8))  # Assuming pixel values are normalized between 0 and 1
+            orig_img_pil = Image.fromarray((orig_img * 255).astype(np.uint8))
             orig_img_pil.save(f"{folder_name}{epoch}_original_{k}.png")
             
             recon_img = stored_figures[k][1]
-            recon_img = deconvolve(recon_img).transpose(1, 2, 0)  # Convert from CHW to HWC format
+            recon_img = deconvolve(recon_img).transpose(1, 2, 0)
     
-            # Convert numpy array to PIL Image and save as PNG
-            recon_img = Image.fromarray((recon_img * 255).astype(np.uint8))  # Assuming pixel values are normalized between 0 and 1
+            recon_img = Image.fromarray((recon_img * 255).astype(np.uint8))
             recon_img.save(f"{folder_name}{epoch}_recon_{k}.png")
             
         torch.save(model.state_dict(), "vae")

@@ -1,5 +1,5 @@
 import numpy as np
-from models.networks import Encoder, Decoder
+from models.networks import Encoder, Decoder, VQ
 
 import torch
 from torch import nn
@@ -24,34 +24,27 @@ from torch import optim
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # May need to refactor
-class VAE(nn.Module):
+class VQVAE(nn.Module):
     def __init__(self):
         
         super().__init__()      
         
-        latent_dim = 256
-        flatten_dim = 1024 * 8 * 8
+        latent_dim = 1024
+        num_embeddings = 512
+        embedding_dim = 64
         
         self.encoder = Encoder(latent_dim=latent_dim)
         
-        self.mean = nn.Linear(flatten_dim, latent_dim)
-        self.logvar = nn.Linear(flatten_dim, latent_dim)
+        self.pre_codebook = nn.Conv2d(latent_dim, embedding_dim, kernel_size=1, stride=1)
         
-        self.decoder = Decoder(latent_dim=latent_dim)
+        self.codebook = VQ(num_embeddings, embedding_dim)
         
-    def encode(self, x):
-        x = torch.flatten(self.encoder(x), start_dim=1)
-        mean = self.mean(x)
-        var = self.logvar(x)
-        return mean, var
-    
-    def reparameterization(self, mean, var):
-        epsilon = torch.randn_like(var).to(device)
-        z = mean + var*epsilon
-        return z
-    
+        self.decoder = Decoder(embedding_dim=embedding_dim, latent_dim=latent_dim)
+                
+                
     def forward(self, x):
-        mean, var = self.encode(x)
-        z = self.reparameterization(mean, var)        
-        x = self.decoder(z)
-        return x, mean, var
+        z_e = self.pre_codebook(self.encoder(x))
+        
+        z_q, indices, codebook_loss = self.codebook(z_e)
+        x_hat = self.decoder(z_q)
+        return x_hat, codebook_loss
