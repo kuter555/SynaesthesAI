@@ -29,11 +29,11 @@ def train_vae(epochs=10, load=False):
     if(load):
         model.load_state_dict(torch.load("vae", weights_only=True))
     
-    optimiser = optim.Adam(model.parameters(), lr=1e-4)
+    optimiser = optim.Adam(model.parameters(), lr=1e-3)
     
     for epoch in range(epochs):
         
-        stored_figures= []  
+        stored_figures= []
         for i, (images, _) in enumerate(dataloader):
             
             print_progress_bar(epoch, i, len(dataloader))

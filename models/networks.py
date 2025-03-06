@@ -62,7 +62,7 @@ class Decoder(nn.Module):
     
     
 class VQ(nn.Module):
-    def __init__(self, num_embeddings, embedding_dim, beta=0.25):
+    def __init__(self, num_embeddings, embedding_dim, beta=0.5):
         super().__init__()
         self.beta = beta
         self.embedding_dim = embedding_dim
