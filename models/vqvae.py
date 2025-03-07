@@ -44,7 +44,7 @@ class VQVAE(nn.Module):
                 
     def forward(self, x):
         z_e = self.pre_codebook(self.encoder(x))
-        
-        z_q, indices, codebook_loss = self.codebook(z_e)
+        z_q, perplexity, _, _, loss = self.codebook(z_e)
         x_hat = self.decoder(z_q)
-        return x_hat, codebook_loss
+        
+        return x_hat, loss, perplexity

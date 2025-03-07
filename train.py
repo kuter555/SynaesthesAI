@@ -45,8 +45,9 @@ def train_vae(epochs=10, load=False):
             # actual training    
             optimiser.zero_grad()
             
-            recon_images, codebook_loss = model(images)
-            recon_loss = loss_function(deconvolve(images), recon_images, codebook_loss)
+            recon_images, codebook_loss, perplexity = model(images)
+
+            recon_loss = torch.mean(recon_images - deconvolve(images)**2) + codebook_loss
             recon_loss.backward()
             optimiser.step()
             

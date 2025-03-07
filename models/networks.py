@@ -49,7 +49,6 @@ class Decoder(nn.Module):
         batch_size = x.shape[0]  # 64
         x = x.view(batch_size, -1)  # Reshape (64, 64, 8, 8) -> (64, 4096)
 
-        
         x = self.fc(x)
         x = x.view(-1, self.latent_dim, 8, 8)
         x = functional.relu(self.tpconv1(x))
@@ -66,26 +65,42 @@ class VQ(nn.Module):
         super().__init__()
         self.beta = beta
         self.embedding_dim = embedding_dim
+        self.num_embeddings = num_embeddings
         
         # Create embedding table
         self.embedding = nn.Embedding(num_embeddings, embedding_dim)
         self.embedding.weight.data.uniform_(-1/num_embeddings, 1/num_embeddings)
 
 
+
+# mostly copied from https://github.com/MishaLaskin/vqvae/blob/master/models/quantizer.py
+# Either Cite properly or rewrite
     def forward(self, z):
         
         B, _, H, W = z.shape
         z_flat = z.permute(0,2,3,1).contiguous().view(-1, self.embedding_dim)
         
+        
+        # My original
         distances = torch.cdist(z_flat, self.embedding.weight)
         
-        encoding_indices = torch.argmin(distances, dim=1)
+        # one I found online
+        distances = torch.sum(z_flat ** 2, dim = 1, keepdim=True) + torch.sum(self.embedding.weight**2, dim=1) - 2 * torch.matmul(z_flat, self.embedding.weight.t())
+            
+        encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
+        min_encodings = torch.zeros(encoding_indices.shape[0], self.num_embeddings)
+        min_encodings.scatter_(1, encoding_indices, 1)
         
-        z_q_flat = self.embedding(encoding_indices)
-
-        z_q = z_q_flat.view(B, H, W, self.embedding_dim).permute(0,3,1,2).contiguous()
-        vq_loss = torch.mean((z_q.detach() - z) ** 2)
-        commitment_loss = self.beta * torch.mean((z.detach() - z_q) ** 2)
-
-
-        return z_q, encoding_indices, vq_loss + commitment_loss
+        z_q = torch.matmul(min_encodings, self.embedding.weight).view(B, self.embedding_dim, H, W)
+        
+        
+        loss = torch.mean((z_q.detach() - z) ** 2) + self.beta * torch.mean((z.detach() - z_q) ** 2)
+        z_q = z + (z_q - z).detach()
+        
+        
+        # adding in a perplexity function?
+        e_mean = torch.mean(min_encodings, dim=0)
+        perplexity = torch.exp(-torch.sum(e_mean * torch.log(e_mean + 1e-10)))
+        z_q = z_q.permute(0,3,1,2).contiguous()
+        
+        return z_q, perplexity, encoding_indices, min_encodings, loss
