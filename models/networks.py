@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # https://www.geeksforgeeks.org/create-model-using-custom-module-in-pytorch/
 class Encoder(nn.Module):
@@ -88,7 +89,7 @@ class VQ(nn.Module):
         distances = torch.sum(z_flat ** 2, dim = 1, keepdim=True) + torch.sum(self.embedding.weight**2, dim=1) - 2 * torch.matmul(z_flat, self.embedding.weight.t())
             
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
-        min_encodings = torch.zeros(encoding_indices.shape[0], self.num_embeddings)
+        min_encodings = torch.zeros(encoding_indices.shape[0], self.num_embeddings).to(device)
         min_encodings.scatter_(1, encoding_indices, 1)
         
         z_q = torch.matmul(min_encodings, self.embedding.weight).view(B, self.embedding_dim, H, W)
