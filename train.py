@@ -56,22 +56,23 @@ def train_vae(epochs=10, load=False):
                 with torch.no_grad():
                     stored_figures.append([images[0].cpu().numpy().squeeze(), recon_images[0].cpu().numpy().squeeze()])
             
-            
-        for k in range(len(stored_figures)):
-            # Original Image
-            orig_img = stored_figures[k][0]
-            orig_img = deconvolve(orig_img).transpose(1, 2, 0)  # Convert from CHW to HWC format
-    
-            # Convert numpy array to PIL Image and save as PNG
-            orig_img_pil = Image.fromarray((orig_img * 255).astype(np.uint8))
-            orig_img_pil.save(f"{folder_name}{epoch}_original_{k}.png")
-            
-            recon_img = stored_figures[k][1]
-            recon_img = deconvolve(recon_img).transpose(1, 2, 0)
-    
-            recon_img = Image.fromarray((recon_img * 255).astype(np.uint8))
-            recon_img.save(f"{folder_name}{epoch}_recon_{k}.png")
-            
+        try:
+            for k in range(len(stored_figures)):
+                # Original Image
+                orig_img = stored_figures[k][0]
+                orig_img = deconvolve(orig_img).transpose(1, 2, 0)  # Convert from CHW to HWC format
+
+                # Convert numpy array to PIL Image and save as PNG
+                orig_img_pil = Image.fromarray((orig_img * 255).astype(np.uint8))
+                orig_img_pil.save(f"{folder_name}{epoch}_original_{k}.png")
+
+                recon_img = stored_figures[k][1]
+                recon_img = deconvolve(recon_img).transpose(1, 2, 0)
+
+                recon_img = Image.fromarray((recon_img * 255).astype(np.uint8))
+                recon_img.save(f"{folder_name}{epoch}_recon_{k}.png")
+        except:
+            print(f"Epoch {i} images failed. Continuing...")
         torch.save(model.state_dict(), "vae")
     
     
