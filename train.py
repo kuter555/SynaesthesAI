@@ -4,6 +4,7 @@ from torch import optim
 
 from PIL import Image
 import numpy as np
+import os
 
 from models.vqvae import VQVAE
 from utils import print_progress_bar, CustomImageFolder
@@ -27,7 +28,7 @@ def train_vae(epochs=10, load=False):
     
     model = VQVAE()
     if(load):
-        model.load_state_dict(torch.load("vae", weights_only=True))
+        model.load_state_dict(torch.load("vae.pth", weights_only=True))
     
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     
@@ -73,8 +74,12 @@ def train_vae(epochs=10, load=False):
                 recon_img.save(f"{folder_name}{epoch}_recon_{k}.png")
         except:
             print(f"Epoch {i} images failed. Continuing...")
-        torch.save(model.state_dict(), "vae")
-    
+        
+
+        try:
+            torch.save(model.state_dict(), "vae.pth")
+        except:
+            print("Failed to save vae")
     
 if __name__ == "__main__":
     load = input("Load existing model? (y/n): ")
