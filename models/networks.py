@@ -102,6 +102,10 @@ class VQ(nn.Module):
         # adding in a perplexity function?
         e_mean = torch.mean(min_encodings, dim=0)
         perplexity = torch.exp(-torch.sum(e_mean * torch.log(e_mean + 1e-10)))
-        z_q = z_q.permute(0,3,1,2).contiguous()
+        
+        z_q = z_q.contiguous()
         
         return z_q, perplexity, encoding_indices, min_encodings, loss
+    
+    
+    
