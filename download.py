@@ -13,8 +13,16 @@ from utils import print_progress_bar
 class cover_art_downloader:
 
     def __init__(self, titles, artists, image_urls):
-                
-        lim = 10000
+        
+        
+        lim = input("Please enter quantity you want to download (max 65536): ")
+        try:
+            int(lim)
+        except:
+            print("Invalid number entered. Set to 10000...\n")
+            lim = 10000
+        lim = min(65536, lim)
+        
         self.folder_path = ".downloaded_images"
         makedirs(self.folder_path, exist_ok=True)
         self.titles = titles[:lim]

@@ -4,6 +4,8 @@ from torch.utils.data import Dataset
 import os
 from PIL import Image
 
+
+# CHATGPT ASSISTED
 class CustomImageFolder(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -22,19 +24,30 @@ class CustomImageFolder(Dataset):
         for root, dirs, files in os.walk(root_dir):
             for file in files:
                 if any(file.lower().endswith(ext) for ext in self.valid_extensions):
-                    self.image_files.append(os.path.join(root, file))
-        
+                    try:
+                        full_path = os.path.join(root, file)
+                        
+                        with Image.open(full_path) as img:
+                            img.verify()  # Verify image integrity
+                        self.image_files.append(full_path)
+                        
+                    except:
+                        continue
+     
     def __len__(self):
         return len(self.image_files)
     
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
-        image = Image.open(image_path).convert("RGB")  # Open image and ensure it's RGB
+        try:
+            image = Image.open(image_path).convert("RGB")  # Open image and ensure it's RGB
         
-        if self.transform:
-            image = self.transform(image)
+            if self.transform:
+                image = self.transform(image)
         
-        return image, 0  # We don't need labels for VAE (return dummy label 0)
+            return image, 0  # We don't need labels for VAE (return dummy label 0)
+        except:
+            return self.__getitem__((idx + 1) % len(self))
 
 
 def print_progress_bar(epoch, iteration, total, length=50):

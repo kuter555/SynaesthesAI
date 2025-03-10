@@ -73,13 +73,13 @@ def train_vae(epochs=10, load=False):
                 recon_img = Image.fromarray((recon_img * 255).astype(np.uint8))
                 recon_img.save(f"{folder_name}{epoch}_recon_{k}.png")
         except:
-            print(f"Epoch {i} images failed. Continuing...")
+            print(f"\nEpoch {i} images failed. Continuing...")
         
 
         try:
             torch.save(model.state_dict(), "vae.pth")
         except:
-            print("Failed to save vae")
+            print("\nFailed to save vae")
     
 if __name__ == "__main__":
     load = input("Load existing model? (y/n): ")
