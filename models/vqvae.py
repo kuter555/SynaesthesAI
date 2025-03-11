@@ -35,16 +35,16 @@ class VQVAE(nn.Module):
         
         self.encoder = Encoder(latent_dim=latent_dim)
         
-        self.pre_codebook = nn.Conv2d(latent_dim, embedding_dim, kernel_size=1, stride=1)
+        self.pre_codebook = nn.Conv2d(latent_dim, embedding_dim, kernel_size=1)
         
-        self.codebook = VQ(num_embeddings, embedding_dim)
+        self.codebook = VQ(num_embeddings=num_embeddings, embedding_dim=embedding_dim, decay=0.25)
         
         self.decoder = Decoder(embedding_dim=embedding_dim, latent_dim=latent_dim)
                 
                 
     def forward(self, x):
         z_e = self.pre_codebook(self.encoder(x))
-        z_q, perplexity, _, _, loss = self.codebook(z_e)
+        z_q, encodings, dictionary_loss, commitment_loss = self.codebook(z_e)
         x_hat = self.decoder(z_q)
         
-        return x_hat, loss, perplexity
+        return x_hat, dictionary_loss + commitment_loss

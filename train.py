@@ -25,6 +25,7 @@ def train_vae(epochs=10, load=False):
     folder_name = ".outputs/"
     dataset = CustomImageFolder(".downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
+    variance = np.var(dataloader.data / 255)
     
     model = VQVAE()
     if(load):
@@ -46,10 +47,12 @@ def train_vae(epochs=10, load=False):
             # actual training    
             optimiser.zero_grad()
             
-            recon_images, codebook_loss, perplexity = model(images)
+            recon_images, dictionary_loss, codebook_loss = model(images)
 
-            recon_loss = torch.mean(recon_images - deconvolve(images)**2) + codebook_loss
-            recon_loss.backward()
+            recon_loss = torch.nn.MSELoss(recon_images, deconvolve(images)) / variance
+            loss = recon_loss + dictionary_loss + codebook_loss
+            
+            loss.backward()
             optimiser.step()
             
             # Display images every 500 batches
