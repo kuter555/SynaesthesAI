@@ -25,7 +25,7 @@ def train_vae(epochs=10, load=False):
     folder_name = ".outputs/"
     dataset = CustomImageFolder(".downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
-    variance = np.var(dataloader.data / 255)
+    variance = 1
     
     model = VQVAE()
     if(load):
