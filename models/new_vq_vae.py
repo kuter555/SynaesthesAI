@@ -5,6 +5,8 @@ import torch
 from torch import nn
 
 
+# WOAH: https://github.com/BhanuPrakashPebbeti/Image-Generation-Using-VQVAE/blob/main/vqvae-gpt.ipynb
+
 class VQVAE(nn.Module):
     
     def __init__(self, 
