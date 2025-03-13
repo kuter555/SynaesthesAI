@@ -162,6 +162,7 @@ class VQ(nn.Module):
         # Exponential moving average of the embeddings.
         self.m_i_ts = SonnetExponentialMovingAverage(decay, e_i_ts.shape)
 
+
     def forward(self, x):
         flat_x = x.permute(0, 2, 3, 1).reshape(-1, self.embedding_dim)
         distances = (
