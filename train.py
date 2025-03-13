@@ -6,6 +6,8 @@ from PIL import Image
 import numpy as np
 import os
 
+import cv2
+
 from models.vqvae import VQVAE
 from utils import print_progress_bar, CustomImageFolder
 
@@ -20,12 +22,12 @@ def loss_function(x, x_hat, codebook_loss):
     return reproduction_loss + codebook_loss
 
 
+
 def train_vae(epochs=10, load=False):
     
     folder_name = ".outputs/"
     dataset = CustomImageFolder(".downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
-    variance = 1
     
     model = VQVAE()
     if(load):
@@ -48,8 +50,11 @@ def train_vae(epochs=10, load=False):
             optimiser.zero_grad()
             
             recon_images, dictionary_loss, codebook_loss = model(images)
-
-            recon_loss = torch.nn.MSELoss(recon_images, deconvolve(images)) / variance
+            
+            #Image.fromarray((deconvolve(images[0].cpu().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(".outputs/test.png")
+                      
+            mse_loss = torch.nn.MSELoss()
+            recon_loss = mse_loss(recon_images, deconvolve(images))
             loss = recon_loss + codebook_loss
             
             if dictionary_loss != None:
