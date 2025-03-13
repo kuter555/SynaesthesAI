@@ -17,7 +17,7 @@ class cover_art_downloader:
         
         lim = input("Please enter quantity you want to download (max 65536): ")
         try:
-            int(lim)
+            lim = int(lim)
         except:
             print("Invalid number entered. Set to 10000...\n")
             lim = 10000
