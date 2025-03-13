@@ -47,4 +47,4 @@ class VQVAE(nn.Module):
         z_q, encodings, dictionary_loss, commitment_loss = self.codebook(z_e)
         x_hat = self.decoder(z_q)
         
-        return x_hat, dictionary_loss + commitment_loss
+        return x_hat, dictionary_loss, commitment_loss

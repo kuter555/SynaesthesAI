@@ -134,7 +134,7 @@ class SonnetExponentialMovingAverage(nn.Module):
 
 #https://github.com/airalcorn2/vqvae-pytorch/blob/master/vqvae.py
 class VQ(nn.Module):
-    def __init__(self, embedding_dim, num_embeddings, use_ema=True, decay=0.25, epsilon=1e-2):
+    def __init__(self, embedding_dim, num_embeddings, use_ema=False, decay=0.25, epsilon=1e-2):
         super().__init__()
         # See Section 3 of "Neural Discrete Representation Learning" and:
         # https://github.com/deepmind/sonnet/blob/v2/sonnet/src/nets/vqvae.py#L142.

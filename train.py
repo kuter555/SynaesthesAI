@@ -50,7 +50,10 @@ def train_vae(epochs=10, load=False):
             recon_images, dictionary_loss, codebook_loss = model(images)
 
             recon_loss = torch.nn.MSELoss(recon_images, deconvolve(images)) / variance
-            loss = recon_loss + dictionary_loss + codebook_loss
+            loss = recon_loss + codebook_loss
+            
+            if dictionary_loss != None:
+                loss = loss + dictionary_loss
             
             loss.backward()
             optimiser.step()
