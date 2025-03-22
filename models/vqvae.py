@@ -153,9 +153,8 @@ class VQVAE(nn.Module):
         
         self.beta = beta
         
-        self.top_encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, top=True)
+        self.top_encoder = Encoder(channels, channels, n_residual_blocks, n_residual_dims, top=True)
         self.bottom_encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, top=False)
-
 
         self.pre_codebook_top = nn.Conv2d(channels, embedding_dim, 1)
         self.codebook_top = Quantize(embedding_dim, num_embeddings)
