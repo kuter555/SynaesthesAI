@@ -12,8 +12,8 @@ class VQVAE(nn.Module):
     def __init__(self, 
                  input_dim=3,
                  latent_dim=1024,
-                 embedding_dim=128,
-                 num_embeddings=512,
+                 embedding_dim=512,
+                 num_embeddings=2048,
                  beta=0.25):
         super(VQVAE, self).__init__()
         
@@ -62,9 +62,7 @@ class VQVAE(nn.Module):
         )
         
     def forward(self, x):
-        
-        
-        
+                
         ## rewrite when you have the chance
         x = self.encoder(x)
         quant_input = self.pre_codebook(x)
