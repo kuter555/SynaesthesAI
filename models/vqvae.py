@@ -10,11 +10,6 @@ import distributed as dist_fn
 
 # WOAH: https://github.com/rosinality/vq-vae-2-pytorch/blob/master/vqvae.py
 
-
-
-
-
-
 class Quantize(nn.Module):
     def __init__(self, dim, n_embed, decay=0.99, eps=1e-5):
         super().__init__()
