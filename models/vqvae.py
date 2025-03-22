@@ -4,7 +4,7 @@ from models.networks import Encoder, Decoder, VQ
 import torch
 from torch import nn
 from torch.nn import functional as F
-import distributed as dist_fn
+import custom_distributed as dist_fn
 
 # WOAH: https://github.com/BhanuPrakashPebbeti/Image-Generation-Using-VQVAE/blob/main/vqvae-gpt.ipynb
 
