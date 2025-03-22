@@ -48,12 +48,12 @@ def train_vae(epochs=10, load=False):
         
             # actual training    
             optimiser.zero_grad()
-            
             recon_images, codebook_loss = model(images)    
             recon_loss = mse_loss(recon_images, deconvolve(images))
             loss = recon_loss + codebook_loss
             loss.backward()
             optimiser.step()
+            
             
             # Display images every 500 batches
             if i % 100 == 0:

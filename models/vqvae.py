@@ -100,7 +100,7 @@ class Encoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(channels // 2, channels, 4, stride=2, padding=1),
             *[nn.ReLU(inplace=True), nn.Conv2d(channels, channels, 3, padding=1)] * (1-top),
-            *[ResidualBlock(input_dim, n_residual_dims) for _ in range(n_residual_blocks)],
+            *[ResidualBlock(channels, n_residual_dims) for _ in range(n_residual_blocks)],
             nn.ReLU(inplace=True)
         )
         
