@@ -117,12 +117,17 @@ class Decoder(nn.Module):
         
         super().__init__()
         
-        self.model = nn.Sequential(
-            nn.Conv2d(input_dim, channels, 3, padding=1),
+        network = [nn.Conv2d(input_dim, channels, 3, padding=1),
             *[ResidualBlock(channels, n_residual_dims) for _ in range(n_residual_blocks)],
-            nn.ReLU(inplace=True),
-            *[nn.ConvTranspose2d(channels, channels // 2, 4, stride=2, padding=1), nn.ReLU(inplace=True), nn.ConvTranspose2d(channels//2, output_dim, 4, stride=2, padding=1)] if not top else nn.ConvTranspose2d(channels, output_dim, 4, stride=2, padding=1) 
-        )
+            nn.ReLU(inplace=True)]
+        
+        if top:
+            network.append(nn.ConvTranspose2d(channels, output_dim, 4, stride=2, padding=1))
+        else:
+            network.extend([nn.ConvTranspose2d(channels, channels // 2, 4, stride=2, padding=1), nn.ReLU(inplace=True), nn.ConvTranspose2d(channels//2, output_dim, 4, stride=2, padding=1)])
+        
+        self.model = nn.Sequential(*network)            
+        
         
     
     def forward(self, x):
