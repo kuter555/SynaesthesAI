@@ -4,7 +4,7 @@ from models.networks import Encoder, Decoder, VQ
 import torch
 from torch import nn
 from torch.nn import functional as F
-import custom_distributed as dist_fn
+import models.custom_distributed as dist_fn
 
 # WOAH: https://github.com/BhanuPrakashPebbeti/Image-Generation-Using-VQVAE/blob/main/vqvae-gpt.ipynb
 
@@ -91,15 +91,24 @@ class Encoder(nn.Module):
     def __init__(self, input_dim, channels, n_residual_blocks, n_residual_dims, top):
         
         super().__init__()
-        self.model = nn.Sequential(
-            nn.Conv2d(input_dim, channels // 2, 4, stride=2, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(channels // 2, channels, 4, stride=2, padding=1),
-            *[nn.ReLU(inplace=True), nn.Conv2d(channels, channels, 3, padding=1)] * (1-top),
-            *[ResidualBlock(channels, n_residual_dims) for _ in range(n_residual_blocks)],
-            nn.ReLU(inplace=True)
-        )
         
+        network = []
+        
+        if top:
+            network.extend([nn.Conv2d(input_dim, channels // 2, 4, stride=2, padding=1),
+                            nn.ReLU(inplace=True),
+                            nn.Conv2d(channels // 2, channels, 4, stride=2, padding=1),
+                            nn.ReLU(inplace=True),
+                            nn.Conv2d(channels, channels, 3, padding=1)])
+        else:
+            network.extend([nn.Conv2d(input_dim, channels // 2, 4, stride=2, padding=1),
+                            nn.ReLU(inplace=True),
+                            nn.Conv2d(channels // 2, channels, 3, padding=1)])
+        
+        network.extend([ResidualBlock(channels, n_residual_dims) for _ in range(n_residual_blocks)])
+        network.append(nn.ReLU(inplace=True))
+        self.model = nn.Sequential(*network)
+                
     
     def forward(self, x):
         
@@ -108,38 +117,28 @@ class Encoder(nn.Module):
         
         
 class Decoder(nn.Module):
-    def __init__(
-        self, in_channel, out_channel, channel, n_res_block, n_res_channel, stride
-    ):
+    
+    def __init__(self, input_dim, output_dim, channels, n_residual_blocks, n_residual_dims, top):
+        
         super().__init__()
+        
+        network = [nn.Conv2d(input_dim, channels, 3, padding=1),
+            *[ResidualBlock(channels, n_residual_dims) for _ in range(n_residual_blocks)],
+            nn.ReLU(inplace=True)]
+        
+        if top:
+            network.append(nn.ConvTranspose2d(channels, output_dim, 4, stride=2, padding=1))
+        else:
+            network.extend([nn.ConvTranspose2d(channels, channels // 2, 4, stride=2, padding=1), 
+                            nn.ReLU(inplace=True), nn.ConvTranspose2d(channels//2, output_dim, 4, stride=2, padding=1)])
+        
+        self.model = nn.Sequential(*network)            
+        
+    
+    def forward(self, x):
+        x = self.model(x)
+        return x
 
-        blocks = [nn.Conv2d(in_channel, channel, 3, padding=1)]
-
-        for i in range(n_res_block):
-            blocks.append(ResidualBlock(channel, n_res_channel))
-
-        blocks.append(nn.ReLU(inplace=True))
-
-        if stride == 4:
-            blocks.extend(
-                [
-                    nn.ConvTranspose2d(channel, channel // 2, 4, stride=2, padding=1),
-                    nn.ReLU(inplace=True),
-                    nn.ConvTranspose2d(
-                        channel // 2, out_channel, 4, stride=2, padding=1
-                    ),
-                ]
-            )
-
-        elif stride == 2:
-            blocks.append(
-                nn.ConvTranspose2d(channel, out_channel, 4, stride=2, padding=1)
-            )
-
-        self.blocks = nn.Sequential(*blocks)
-
-    def forward(self, input):
-        return self.blocks(input)
 
 class VQVAE(nn.Module):
     
