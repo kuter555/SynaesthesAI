@@ -3,5 +3,6 @@
 .venv
 __pycache__/*
 errors.txt
-vae
+vae.pth
 models/__pycache__/*
+.test_images

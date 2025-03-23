@@ -1,24 +1,12 @@
 import torch
-from torch.nn import functional
 from torch import optim
-
 from PIL import Image
 import numpy as np
-import os
-
-import cv2
-
-#from models.vqvae import VQVAE
-
 from models.vqvae import VQVAE
-from utils import print_progress_bar, CustomImageFolder
-
+from utils import print_progress_bar, CustomImageFolder, deconvolve
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-def deconvolve(x):
-    return ((x * 0.5) + 0.5).clip(0, 1)
 
 
 def train_vae(epochs=10, load=False):
@@ -27,14 +15,12 @@ def train_vae(epochs=10, load=False):
     dataset = CustomImageFolder(".downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
-    
     model = VQVAE()
     if(load):
         model.load_state_dict(torch.load("vae.pth", weights_only=True))
     model.to(device)
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
-    
     
     for epoch in range(epochs):
         
@@ -49,7 +35,7 @@ def train_vae(epochs=10, load=False):
             # actual training    
             optimiser.zero_grad()
             recon_images, codebook_loss = model(images)    
-            recon_loss = mse_loss(recon_images, deconvolve(images))
+            recon_loss = mse_loss(recon_images, images)
             loss = recon_loss + codebook_loss
             loss.backward()
             optimiser.step()

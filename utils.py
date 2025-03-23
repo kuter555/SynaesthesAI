@@ -58,3 +58,8 @@ def print_progress_bar(epoch, iteration, total, length=50):
         bar = f"[{'=' * progress}{' ' * (length - progress)}] {int(100 * iteration / total)}%"
     sys.stdout.write(f"\r{bar}")
     sys.stdout.flush()
+    
+    
+
+def deconvolve(x):
+    return ((x * 0.5) + 0.5).clip(0, 1)
