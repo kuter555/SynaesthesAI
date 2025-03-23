@@ -116,7 +116,7 @@ class Decoder(nn.Module):
         blocks = [nn.Conv2d(in_channel, channel, 3, padding=1)]
 
         for i in range(n_res_block):
-            blocks.append(ResBlock(channel, n_res_channel))
+            blocks.append(ResidualBlock(channel, n_res_channel))
 
         blocks.append(nn.ReLU(inplace=True))
 
