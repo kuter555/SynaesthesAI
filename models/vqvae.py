@@ -251,19 +251,20 @@ class ResBlock(nn.Module):
 
 class Encoder(nn.Module):
     
-    def __init__(self, input_dim, channels, n_residual_blocks, n_residual_dims, top):
+    def __init__(self, input_dim, channels, n_residual_blocks, n_residual_dims, stride):
         
         super().__init__()
         
         network = []
         
-        if top:
+        if stride==4:
             network.extend([nn.Conv2d(input_dim, channels // 2, 4, stride=2, padding=1),
                             nn.ReLU(inplace=True),
                             nn.Conv2d(channels // 2, channels, 4, stride=2, padding=1),
                             nn.ReLU(inplace=True),
-                            nn.Conv2d(channels, channels, 3, padding=1)])
-        else:
+                            nn.Conv2d(channels, channels, 3, padding=1),])
+        
+        elif stride==2:
             network.extend([nn.Conv2d(input_dim, channels // 2, 4, stride=2, padding=1),
                             nn.ReLU(inplace=True),
                             nn.Conv2d(channels // 2, channels, 3, padding=1)])
@@ -274,14 +275,13 @@ class Encoder(nn.Module):
                 
     
     def forward(self, x):
-        
         x = self.model(x)
         return x
         
         
 class Decoder(nn.Module):
     
-    def __init__(self, input_dim, output_dim, channels, n_residual_blocks, n_residual_dims, top):
+    def __init__(self, input_dim, output_dim, channels, n_residual_blocks, n_residual_dims, stride):
         
         super().__init__()
         
@@ -289,11 +289,13 @@ class Decoder(nn.Module):
             *[ResBlock(channels, n_residual_dims) for _ in range(n_residual_blocks)],
             nn.ReLU(inplace=True)]
         
-        if top:
+        if stride == 2:
             network.append(nn.ConvTranspose2d(channels, output_dim, 4, stride=2, padding=1))
-        else:
+        
+        elif stride==4:
             network.extend([nn.ConvTranspose2d(channels, channels // 2, 4, stride=2, padding=1), 
-                            nn.ReLU(inplace=True), nn.ConvTranspose2d(channels//2, output_dim, 4, stride=2, padding=1)])
+                            nn.ReLU(inplace=True), 
+                            nn.ConvTranspose2d(channels//2, output_dim, 4, stride=2, padding=1)])
         
         self.model = nn.Sequential(*network)            
         
