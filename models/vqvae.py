@@ -81,80 +81,7 @@ import models.custom_distributed as dist_fn
 #         return out
 
 
-# class VQVAE(nn.Module):
-    
-#     def __init__(self, 
-#                  input_dim=3,
-#                  channels=128,
-                 
-#                  n_residual_blocks=2,
-#                  n_residual_dims=32,
-                 
-#                  embedding_dim=64,
-#                  num_embeddings=512,
-                 
-#                  beta=0.25):
-#         super(VQVAE, self).__init__()
-        
-#         self.beta = beta
-        
-#         self.bottom_encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, top=False)
-#         self.top_encoder = Encoder(channels, channels, n_residual_blocks, n_residual_dims, top=True)
 
-#         self.pre_codebook_top = nn.Conv2d(channels, embedding_dim, 1)
-#         self.codebook_top = Quantize(embedding_dim, num_embeddings)
-#         self.post_codebook_top = nn.ConvTranspose2d(embedding_dim, embedding_dim, 4, stride=2, padding=1)
-        
-#         self.pre_codebook_bottom = nn.Conv2d(embedding_dim + channels, embedding_dim, 1)
-#         self.codebook_bottom = Quantize(embedding_dim, num_embeddings)        
-        
-#         self.top_decoder = Decoder(embedding_dim, embedding_dim, channels, n_residual_blocks, n_residual_dims, True)
-#         self.bottom_decoder = Decoder(embedding_dim + embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims, False)
-        
-        
-#     def forward(self, input):
-#         quant_t, quant_b, diff, _, _ = self.encode(input)
-#         dec = self.decode(quant_t, quant_b)
-
-#         return dec, diff.mean() * self.beta
-
-
-#     def encode(self, input):
-#         enc_b = self.bottom_encoder(input)
-#         enc_t = self.top_encoder(enc_b)
-
-#         quant_t = self.pre_codebook_top(enc_t).permute(0, 2, 3, 1)
-#         quant_t, diff_t, id_t = self.codebook_top(quant_t)
-#         quant_t = quant_t.permute(0, 3, 1, 2)
-#         diff_t = diff_t.unsqueeze(0)
-
-#         dec_t = self.top_decoder(quant_t)
-#         enc_b = torch.cat([dec_t, enc_b], 1)
-
-#         quant_b = self.pre_codebook_bottom(enc_b).permute(0, 2, 3, 1)
-#         quant_b, diff_b, id_b = self.codebook_bottom(quant_b)
-#         quant_b = quant_b.permute(0, 3, 1, 2)
-#         diff_b = diff_b.unsqueeze(0)
-
-#         return quant_t, quant_b, diff_t + diff_b, id_t, id_b
-
-
-#     def decode(self, quant_t, quant_b):
-#         upsample_t = self.post_codebook_top(quant_t)
-#         quant = torch.cat([upsample_t, quant_b], 1)
-#         dec = self.bottom_decoder(quant)
-
-#         return dec
-
-#     def decode_code(self, code_t, code_b):
-#         quant_t = self.codebook_top.embed_code(code_t)
-#         quant_t = quant_t.permute(0, 3, 1, 2)
-#         quant_b = self.codebook_bottom.embed_code(code_b)
-#         quant_b = quant_b.permute(0, 3, 1, 2)
-
-#         dec = self.decode(quant_t, quant_b)
-
-#         return dec
     
     
     
@@ -304,77 +231,75 @@ class Decoder(nn.Module):
         x = self.model(x)
         return x
 
-
 class VQVAE(nn.Module):
-    def __init__(
-        self,
-        in_channel=3,
-        channel=128,
-        n_res_block=2,
-        n_res_channel=32,
-        embed_dim=64,
-        n_embed=512,
-        decay=0.99,
-    ):
-        super().__init__()
+    
+    def __init__(self, 
+                 input_dim=3,
+                 channels=128,
+                 
+                 n_residual_blocks=2,
+                 n_residual_dims=32,
+                 
+                 embedding_dim=64,
+                 num_embeddings=512,
+                 
+                 beta=0.25):
+        super(VQVAE, self).__init__()
+        
+        self.beta = beta
+        
+        self.bottom_encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
+        self.top_encoder = Encoder(channels, channels, n_residual_blocks, n_residual_dims, stride=2)
 
-        self.enc_b = Encoder(in_channel, channel, n_res_block, n_res_channel, stride=4)
-        self.enc_t = Encoder(channel, channel, n_res_block, n_res_channel, stride=2)
-        self.quantize_conv_t = nn.Conv2d(channel, embed_dim, 1)
-        self.quantize_t = Quantize(embed_dim, n_embed)
-        self.dec_t = Decoder(
-            embed_dim, embed_dim, channel, n_res_block, n_res_channel, stride=2
-        )
-        self.quantize_conv_b = nn.Conv2d(embed_dim + channel, embed_dim, 1)
-        self.quantize_b = Quantize(embed_dim, n_embed)
-        self.upsample_t = nn.ConvTranspose2d(
-            embed_dim, embed_dim, 4, stride=2, padding=1
-        )
-        self.dec = Decoder(
-            embed_dim + embed_dim,
-            in_channel,
-            channel,
-            n_res_block,
-            n_res_channel,
-            stride=4,
-        )
-
+        self.pre_codebook_top = nn.Conv2d(channels, embedding_dim, 1)
+        self.codebook_top = Quantize(embedding_dim, num_embeddings)
+        self.post_codebook_top = nn.ConvTranspose2d(embedding_dim, embedding_dim, 4, stride=2, padding=1)
+        
+        self.pre_codebook_bottom = nn.Conv2d(embedding_dim + channels, embedding_dim, 1)
+        self.codebook_bottom = Quantize(embedding_dim, num_embeddings)        
+        
+        self.top_decoder = Decoder(embedding_dim, embedding_dim, channels, n_residual_blocks, n_residual_dims, stride=2)
+        self.bottom_decoder = Decoder(embedding_dim + embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
+        
+        
     def forward(self, input):
         quant_t, quant_b, diff, _, _ = self.encode(input)
         dec = self.decode(quant_t, quant_b)
 
-        return dec, diff
+        return dec, diff.mean() * self.beta
+
 
     def encode(self, input):
-        enc_b = self.enc_b(input)
-        enc_t = self.enc_t(enc_b)
+        enc_b = self.bottom_encoder(input)
+        enc_t = self.top_encoder(enc_b)
 
-        quant_t = self.quantize_conv_t(enc_t).permute(0, 2, 3, 1)
-        quant_t, diff_t, id_t = self.quantize_t(quant_t)
+        quant_t = self.pre_codebook_top(enc_t).permute(0, 2, 3, 1)
+        quant_t, diff_t, id_t = self.codebook_top(quant_t)
         quant_t = quant_t.permute(0, 3, 1, 2)
         diff_t = diff_t.unsqueeze(0)
 
-        dec_t = self.dec_t(quant_t)
+        dec_t = self.top_decoder(quant_t)
         enc_b = torch.cat([dec_t, enc_b], 1)
 
-        quant_b = self.quantize_conv_b(enc_b).permute(0, 2, 3, 1)
-        quant_b, diff_b, id_b = self.quantize_b(quant_b)
+        quant_b = self.pre_codebook_bottom(enc_b).permute(0, 2, 3, 1)
+        quant_b, diff_b, id_b = self.codebook_bottom(quant_b)
         quant_b = quant_b.permute(0, 3, 1, 2)
         diff_b = diff_b.unsqueeze(0)
 
         return quant_t, quant_b, diff_t + diff_b, id_t, id_b
 
+
     def decode(self, quant_t, quant_b):
-        upsample_t = self.upsample_t(quant_t)
+        upsample_t = self.post_codebook_top(quant_t)
         quant = torch.cat([upsample_t, quant_b], 1)
-        dec = self.dec(quant)
+        dec = self.bottom_decoder(quant)
 
         return dec
 
     def decode_code(self, code_t, code_b):
-        quant_t = self.quantize_t.embed_code(code_t)
+        quant_t = self.codebook_top.embed_code(code_t)
         quant_t = quant_t.permute(0, 3, 1, 2)
-        quant_b = self.quantize_b.embed_code(code_b)
+        quant_b = self.codebook_bottom.embed_code(code_b)
         quant_b = quant_b.permute(0, 3, 1, 2)
 
         dec = self.decode(quant_t, quant_b)
