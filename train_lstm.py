@@ -133,6 +133,9 @@ def extract_latent_codes():
         stored_latent_t = []
         stored_latent_b = []
         for i, (images, _) in enumerate(dataloader):
+            
+            print_progress_bar("Extracting", i, len(dataloader))
+            
             images = images.to(device)
             quant_t, quant_b, _, _, _ = model.encode(images)
 
