@@ -125,7 +125,7 @@ def extract_latent_codes():
     model = VQVAE()
     try:
         print("Loading Model Dict")
-        model.load_state_dict(torch.load("vae.pth", weights_only=True))
+        model.load_state_dict(torch.load("vae.pth", weights_only=True, map_location=device))
         model.to(device)
     
     except:

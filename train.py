@@ -17,7 +17,7 @@ def train_vae(epochs=10, load=False):
     
     model = VQVAE()
     if(load):
-        model.load_state_dict(torch.load("vae.pth", weights_only=True))
+        model.load_state_dict(torch.load("vae.pth", weights_only=True, map_location=device))
     model.to(device)
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
