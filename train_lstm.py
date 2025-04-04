@@ -123,14 +123,13 @@ def extract_latent_codes():
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE()
-    try:
-        print("Loading Model Dict")
-        model.load_state_dict(torch.load("vae.pth", weights_only=True, map_location=device))
-        model.to(device)
+    print("Loading Model Dict")
+    model.load_state_dict(torch.load("vae.pth", weights_only=True, map_location=device))
+    model.to(device)
     
-    except:
-        print("Failed to run. Exiting...")
-        return -1
+    # except:
+    #     print("Failed to run. Exiting...")
+    #     return -1
     
     print("Starting image processing")
     
