@@ -1,5 +1,5 @@
 import numpy as np
-from models.networks import Encoder, Decoder, VQ
+from models.networks import Encoder, Decoder
 
 import torch
 from torch import nn
@@ -10,81 +10,6 @@ import models.custom_distributed as dist_fn
 
 # WOAH: https://github.com/rosinality/vq-vae-2-pytorch/blob/master/vqvae.py
 
-# class Quantize(nn.Module):
-#     def __init__(self, dim, n_embed, decay=0.99, eps=1e-5):
-#         super().__init__()
-
-#         self.dim = dim
-#         self.n_embed = n_embed
-#         self.decay = decay
-#         self.eps = eps
-
-#         embed = torch.randn(dim, n_embed)
-#         self.register_buffer("embed", embed)
-#         self.register_buffer("cluster_size", torch.zeros(n_embed))
-#         self.register_buffer("embed_avg", embed.clone())
-
-#     def forward(self, input):
-#         flatten = input.reshape(-1, self.dim)
-#         dist = (
-#             flatten.pow(2).sum(1, keepdim=True)
-#             - 2 * flatten @ self.embed
-#             + self.embed.pow(2).sum(0, keepdim=True)
-#         )
-#         _, embed_ind = (-dist).max(1)
-#         embed_onehot = F.one_hot(embed_ind, self.n_embed).type(flatten.dtype)
-#         embed_ind = embed_ind.view(*input.shape[:-1])
-#         quantize = self.embed_code(embed_ind)
-
-#         if self.training:
-#             embed_onehot_sum = embed_onehot.sum(0)
-#             embed_sum = flatten.transpose(0, 1) @ embed_onehot
-
-#             dist_fn.all_reduce(embed_onehot_sum)
-#             dist_fn.all_reduce(embed_sum)
-
-#             self.cluster_size.data.mul_(self.decay).add_(
-#                 embed_onehot_sum, alpha=1 - self.decay
-#             )
-#             self.embed_avg.data.mul_(self.decay).add_(embed_sum, alpha=1 - self.decay)
-#             n = self.cluster_size.sum()
-#             cluster_size = (
-#                 (self.cluster_size + self.eps) / (n + self.n_embed * self.eps) * n
-#             )
-#             embed_normalized = self.embed_avg / cluster_size.unsqueeze(0)
-#             self.embed.data.copy_(embed_normalized)
-
-#         diff = (quantize.detach() - input).pow(2).mean()
-#         quantize = input + (quantize - input).detach()
-
-#         return quantize, diff, embed_ind
-
-#     def embed_code(self, embed_id):
-#         return F.embedding(embed_id, self.embed.transpose(0, 1))
-
-
-# class ResidualBlock(nn.Module):
-    
-#     def __init__(self, input_dim, channels):
-#         super().__init__()
-
-#         self.conv = nn.Sequential(
-#             nn.ReLU(),
-#             nn.Conv2d(input_dim, channels, 3, padding=1),
-#             nn.ReLU(inplace=True),
-#             nn.Conv2d(channels, input_dim, 1),
-#         )
-
-#     def forward(self, input):
-#         out = self.conv(input)
-#         out += input
-#         return out
-
-
-
-    
-    
-    
 
 # Copyright 2018 The Sonnet Authors. All Rights Reserved.
 #
@@ -103,6 +28,36 @@ import models.custom_distributed as dist_fn
 
 
 # Borrowed from https://github.com/deepmind/sonnet and ported it to PyTorch
+
+class LatentLSTM(nn.Module):
+    def __init__(self, vocab_dim, embedding_dim, hidden_dim, layers):
+        super(LatentLSTM, self).__init__()
+        self.embedding = nn.Embedding(vocab_dim, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, layers, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, vocab_dim)
+        
+    def forward(self, x, h=None):
+        x = self.embedding(x)
+        out, h = self.lstm(x, h)
+        out = self.fc(out)
+        return out, h
+      
+        
+class InheritedLatentLSTM(nn.Module):
+    def __init__(self, vocab_dim, embedding_dim, hidden_dim, layers):
+        super(LatentLSTM, self).__init__()
+        self.embedding = nn.Embedding(vocab_dim, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim * 2, hidden_dim, layers, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, vocab_dim)
+        
+    def forward(self, x, y, h=None):
+        x = self.embedding(x)
+        y = self.embedding(y)
+        full_input = torch.cat((x, y), dim=-1)
+        out, h = self.lstm(full_input, h)
+        out = self.fc(out)
+        return out, h
+        
 
 
 class Quantize(nn.Module):
@@ -231,6 +186,7 @@ class Decoder(nn.Module):
         x = self.model(x)
         return x
 
+
 class VQVAE(nn.Module):
     
     def __init__(self, 
@@ -245,6 +201,8 @@ class VQVAE(nn.Module):
                  
                  beta=0.25):
         super(VQVAE, self).__init__()
+        
+        self.num_embeddings = num_embeddings
         
         self.beta = beta
         
@@ -287,6 +245,7 @@ class VQVAE(nn.Module):
         diff_b = diff_b.unsqueeze(0)
 
         return quant_t, quant_b, diff_t + diff_b, id_t, id_b
+
 
 
     def decode(self, quant_t, quant_b):

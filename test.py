@@ -7,10 +7,8 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = "vae.pth"
-image = ".test_images/test_im_2_test_.jpeg"
 
-
-def test_vqvae(model, image):
+def test_vqvae(model):
     
     if not os.path.exists(model):    
         print("Model not found.")
@@ -28,11 +26,12 @@ def test_vqvae(model, image):
         
         images = images.to(device)
         recon_images, _ = model(images)
-        Image.fromarray((deconvolve(recon_images[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(".test_images/recon.jpeg")
+        for i in range(len(recon_images)):        
+            Image.fromarray((deconvolve(recon_images[i].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f".test_images/recon_{i}.jpeg")
 
 
 if __name__ == "__main__":
     
     print("Testing novel image reconstruction...")
-    test_vqvae(model, image)
+    test_vqvae(model)
     print("Done")

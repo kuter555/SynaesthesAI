@@ -6,3 +6,4 @@ errors.txt
 vae.pth
 models/__pycache__/*
 .test_images
+todo.txt
