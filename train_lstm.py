@@ -116,17 +116,23 @@ def train_lstm(num_epochs=100):
 
 
 def extract_latent_codes():
+    
+    print("Beginning Extraction")
+    
     dataset = CustomImageFolder(".downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE()
     try:
+        print("Loading Model Dict")
         model.load_state_dict(torch.load("vae.pth", weights_only=True))
         model.to(device)
     
     except:
         print("Failed to run. Exiting...")
         return -1
+    
+    print("Starting image processing")
     
     with torch.no_grad():
         model.eval()
