@@ -43,7 +43,7 @@ def train_lstm(num_epochs=100):
 
     model = VQVAE()
     try:
-        model.load_state_dict(torch.load("vae.pth", weights_only=True))
+        model.load_state_dict(torch.load("vae.pth"))
         model.to(device)
     
     except:
@@ -124,7 +124,7 @@ def extract_latent_codes():
     
     model = VQVAE()
     print("Loading Model Dict")
-    model.load_state_dict(torch.load("vae.pth", weights_only=True, map_location=device))
+    model.load_state_dict(torch.load("vae.pth", map_location=device))
     model.to(device)
     
     # except:

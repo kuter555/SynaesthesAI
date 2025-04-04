@@ -8,7 +8,6 @@ from utils import print_progress_bar, CustomImageFolder, deconvolve
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-
 def train_vae(epochs=10, load=False):
     
     folder_name = ".outputs/"
