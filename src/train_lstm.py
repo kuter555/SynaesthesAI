@@ -54,6 +54,10 @@ def train_lstm(num_epochs=100):
         top_latents = torch.load("../models/renewed_top_latents.pt").to(device)
         bottom_latents = torch.load("../models/renewed_bottom_latents_1.pt").to(device)
         
+        print(top_latents.dtype)     # should be torch.int64
+        print(top_latents.min())     # should be >= 0
+        print(top_latents.max())     
+        
     except:
         print("Failed to load latents. Have you extracted them yet?...\n")
         return -1
@@ -127,10 +131,6 @@ def extract_latent_codes():
     model.load_state_dict(torch.load("../models/vae.pth", map_location=device))
     model.to(device)
     
-    # except:
-    #     print("Failed to run. Exiting...")
-    #     return -1
-    
     print("Starting image processing")
     
     with torch.no_grad():
@@ -142,10 +142,10 @@ def extract_latent_codes():
             print_progress_bar("Extracting", i, len(dataloader))
             
             images = images.to(device)
-            quant_t, quant_b, _, _, _ = model.encode(images)
+            _, _, _, index_t, index_b = model.encode(images)
 
-            stored_latent_t.append(quant_t.cpu())
-            stored_latent_b.append(quant_b.cpu())
+            stored_latent_t.append(index_t.cpu())
+            stored_latent_b.append(index_b.cpu())
     
     stored_latent_b = torch.cat(stored_latent_b, dim=0)
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
