@@ -51,10 +51,8 @@ def train_lstm(num_epochs=100):
         return -1
     
     try:
-        top_latents = torch.load("../models/renewed_top_latents.pt")
-        top_latents.to(device)
-        bottom_latents = torch.load("../models/renewed_bottom_latents_1.pt")
-        bottom_latents.to(device)
+        top_latents = torch.load("../models/renewed_top_latents.pt").to(device)
+        bottom_latents = torch.load("../models/renewed_bottom_latents_1.pt").to(device)
         
     except:
         print("Failed to load latents. Have you extracted them yet?...\n")
@@ -67,8 +65,8 @@ def train_lstm(num_epochs=100):
     t_dataset = LatentDataset(top_sequence)
     b_dataset = InheritedLatentDataset(bottom_sequence, top_sequence)   
     
-    lstm = LatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3)
-    bottom_lstm = InheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3)
+    lstm = LatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3).to(device)
+    bottom_lstm = InheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3).to(device)
     criterion = nn.CrossEntropyLoss()    
     optimiser = optim.Adam(lstm.parameters(), lr=1e-3)
     
