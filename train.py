@@ -2,21 +2,21 @@ import torch
 from torch import optim
 from PIL import Image
 import numpy as np
-from models.vqvae import VQVAE
-from utils import print_progress_bar, CustomImageFolder, deconvolve
+from src.vqvae import VQVAE
+from src.utils import print_progress_bar, CustomImageFolder, deconvolve
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train_vae(epochs=10, load=False):
     
-    folder_name = ".outputs/"
-    dataset = CustomImageFolder(".downloaded_images")
+    folder_name = "data/outputs/"
+    dataset = CustomImageFolder("data/downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE()
     if(load):
-        model.load_state_dict(torch.load("vae.pth", weights_only=True, map_location=device))
+        model.load_state_dict(torch.load("models/vae.pth", weights_only=True, map_location=device))
     model.to(device)
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
@@ -65,7 +65,7 @@ def train_vae(epochs=10, load=False):
         
 
         try:
-            torch.save(model.state_dict(), "vae.pth")
+            torch.save(model.state_dict(), "models/vae.pth")
         except:
             print("\nFailed to save vae")
         

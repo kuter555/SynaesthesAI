@@ -1,9 +1,6 @@
-.downloaded_images
-.outputs
 .venv
-__pycache__/*
-errors.txt
-vae.pth
-models/__pycache__/*
+__pycache__
 .test_images
 todo.txt
+data/*
+models/*
