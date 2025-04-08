@@ -45,7 +45,7 @@ class LatentLSTM(nn.Module):
         
 class InheritedLatentLSTM(nn.Module):
     def __init__(self, vocab_dim, embedding_dim, hidden_dim, layers):
-        super(LatentLSTM, self).__init__()
+        super(InheritedLatentLSTM, self).__init__()
         self.embedding = nn.Embedding(vocab_dim, embedding_dim)
         self.lstm = nn.LSTM(embedding_dim * 2, hidden_dim, layers, batch_first=True)
         self.fc = nn.Linear(hidden_dim, vocab_dim)
