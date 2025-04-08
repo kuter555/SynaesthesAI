@@ -65,8 +65,8 @@ def train_lstm(num_epochs=100):
     t_dataset = LatentDataset(top_sequence)
     b_dataset = InheritedLatentDataset(bottom_sequence, top_sequence)   
     
-    lstm = LatentLSTM()
-    bottom_lstm = InheritedLatentLSTM()
+    lstm = LatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3)
+    bottom_lstm = InheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3)
     criterion = nn.CrossEntropyLoss()    
     optimiser = optim.Adam(lstm.parameters(), lr=1e-3)
     
