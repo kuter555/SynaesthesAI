@@ -52,7 +52,9 @@ def train_lstm(num_epochs=100):
     
     try:
         top_latents = torch.load("../models/renewed_top_latents.pt")
+        top_latents.to(device)
         bottom_latents = torch.load("../models/renewed_bottom_latents_1.pt")
+        bottom_latents.to(device)
         
     except:
         print("Failed to load latents. Have you extracted them yet?...\n")
@@ -81,7 +83,7 @@ def train_lstm(num_epochs=100):
         for batch in t_dataloader:
             
             inputs, targets = batch
-            inputs, targets = inputs.long().to(device), targets.long().to(device)
+            inputs, targets = inputs.to(device).long(), targets.to(device).long()
             
             optimiser.zero_grad()
             outputs, _ = lstm(inputs)
