@@ -81,7 +81,7 @@ def train_lstm(num_epochs=100):
         for batch in t_dataloader:
             
             inputs, targets = batch
-            inputs, targets = inputs.to(device), targets.to(device)
+            inputs, targets = inputs.long().to(device), targets.long().to(device)
             
             optimiser.zero_grad()
             outputs, _ = lstm(inputs)
