@@ -1,8 +1,95 @@
 import sys
 from torchvision import transforms
+from torch import from_numpy
 from torch.utils.data import Dataset
+import torch.nn.functional as F
 import os
 from PIL import Image
+import numpy as np
+
+class CustomAudioImagePairing(Dataset):
+    
+    def __init__(self, image_dir, audio_dir):
+        self.image_dir = image_dir
+        self.audio_dir = audio_dir
+        
+        self.images = []
+        self.audio = []
+        
+        self.transform =  transforms.Compose([
+            transforms.Resize((256, 256)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,0.5, 0.5), (0.5,0.5,0.5))
+        ])       
+        
+         # Collect all valid image files
+        for root, _, files in os.walk(self.image_dir):
+            for file in files:
+                if file.lower().endswith('.jpeg'):
+                    try:
+                        path = os.path.join(root, file)
+                        with Image.open(path) as img:
+                            img.verify()
+                        self.images.append(file.split('.')[0])
+                    except:
+                        continue
+                    
+                    
+        for _, _, x_files in os.walk(self.audio_dir):
+            for file in x_files:
+                if file.lower().endswith('.npy'):
+                    try:
+                        path = file.split('.')[0]
+                        self.audio.append(path)
+                    except:
+                        continue
+        
+        
+        self.pairings = []
+        for song in self.audio:
+            if song in self.images:
+                self.pairings.append(song)                
+        
+
+        
+    def __len__(self):
+        return len(self.pairings)
+    
+    
+    def __getitem__(self, idx):
+        pair = self.pairings[idx]
+        image = Image.open(os.path.join(f"{self.image_dir}", f"{pair}.jpeg")).convert("RGB")  # Open image and ensure it's RGB
+        if self.transform:
+            image = self.transform(image)
+        
+        spectrogram = np.load(os.path.join(self.audio_dir, f"{pair}.npy"))
+        spectrogram = from_numpy(spectrogram).float()  # convert to tensor
+        
+        if spectrogram.ndim == 3:
+            print(f"We are here (3): {spectrogram.shape}")
+            spectrogram = spectrogram.unsqueeze(0)
+            print(f"And now... (3): {spectrogram.shape}")
+        elif spectrogram.ndim == 2:
+            print(f"We are here (2): {spectrogram.shape}")
+            spectrogram = spectrogram.unsqueeze(0).unsqueeze(0)
+            print(f"And now... (2): {spectrogram.shape}")
+            
+        spectrogram = F.interpolate(spectrogram, size=(256, 256), mode='bilinear', align_corners=False)
+        spectrogram = spectrogram.repeat(1, 3, 1, 1)
+        
+        spectrogram = spectrogram.squeeze(0)
+        print("Final spectrogram shape: ", spectrogram.shape)
+        
+        return spectrogram, image
+        
+        
+        #except Exception as e:
+        
+        #    print(f"Failed here: {e}")
+        
+        #    return self.__getitem__((idx + 1) % len(self))
+        
+    
 
 
 # CHATGPT ASSISTED
@@ -34,8 +121,10 @@ class CustomImageFolder(Dataset):
                     except:
                         continue
      
+    
     def __len__(self):
         return len(self.image_files)
+    
     
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
@@ -44,8 +133,8 @@ class CustomImageFolder(Dataset):
         
             if self.transform:
                 image = self.transform(image)
-        
             return image, 0  # We don't need labels for VAE (return dummy label 0)
+        
         except:
             return self.__getitem__((idx + 1) % len(self))
 

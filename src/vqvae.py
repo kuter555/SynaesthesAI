@@ -1,5 +1,4 @@
 import numpy as np
-from networks import Encoder, Decoder
 
 import torch
 from torch import nn
@@ -137,11 +136,8 @@ class ResBlock(nn.Module):
 
 
 class Encoder(nn.Module):
-    
     def __init__(self, input_dim, channels, n_residual_blocks, n_residual_dims, stride):
-        
-        super().__init__()
-        
+        super().__init__()    
         network = []
         
         if stride==4:
@@ -233,6 +229,7 @@ class VQVAE(nn.Module):
 
 
     def encode(self, input):
+        
         enc_b = self.bottom_encoder(input)
         enc_t = self.top_encoder(enc_b)
 
@@ -242,6 +239,9 @@ class VQVAE(nn.Module):
         diff_t = diff_t.unsqueeze(0)
 
         dec_t = self.top_decoder(quant_t)
+        
+        print(f"Enc_b shape: {enc_b.shape}")
+        print(f"Dec_t shape: {dec_t.shape}")
         enc_b = torch.cat([dec_t, enc_b], 1)
 
         quant_b = self.pre_codebook_bottom(enc_b).permute(0, 2, 3, 1)
@@ -249,6 +249,7 @@ class VQVAE(nn.Module):
         quant_b = quant_b.permute(0, 3, 1, 2)
         diff_b = diff_b.unsqueeze(0)
 
+        # quant is the quantised values, id is the indices
         return quant_t, quant_b, diff_t + diff_b, id_t, id_b
 
 
