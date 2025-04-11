@@ -2,7 +2,7 @@ import os
 import torch
 from vqvae import VQVAE
 from PIL import Image
-from utils import deconvolve, CustomImageFolder
+from utils import deconvolve, CustomImageFolder, CustomAudioImagePairing
 import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -30,8 +30,39 @@ def test_vqvae(model):
             Image.fromarray((deconvolve(recon_images[i].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f".test_images/recon_{i}.jpeg")
 
 
+def test_audio_vqvae(root, audio_model, image_model):
+    if not os.path.exists(audio_model) or not os.path.exists(image_model):    
+        print("Model not found.")
+        return
+    dataset = CustomAudioImagePairing(f"{root}data/downloaded_images/", f"{root}data/spectrograms")
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
+
+    image_vae = VQVAE()
+    image_vae.to(device)
+    image_vae.load_state_dict(torch.load(image_model, map_location=device))
+    
+    audio_vae = VQVAE()
+    audio_vae.to(device)
+    audio_vae.load_state_dict(torch.load(audio_model, map_location=device))
+    
+    
+    for epoch in range(1):
+        for i, (spectrograms, images) in enumerate(dataloader):
+            
+            audio_encoded_t, audio_encoded_b, _, _, _ = audio_vae.encode(spectrograms)
+            image_output = image_vae.decode(audio_encoded_t, audio_encoded_b)
+    
+            Image.fromarray((deconvolve(image_output[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}data/outputs/first_audio_test{i}.jpeg")
+
+    
+    
+root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI/"
+audio_model = f"{root}models/audioVAE.pth"
+image_model = f"{root}models/vae.pth"
+
+
 if __name__ == "__main__":
     
-    print("Testing novel image reconstruction...")
-    test_vqvae(model)
+    print("Testing novel image generation...")
+    test_audio_vqvae(root, audio_model, image_model)
     print("Done")

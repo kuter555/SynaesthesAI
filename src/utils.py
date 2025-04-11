@@ -74,15 +74,7 @@ class CustomAudioImagePairing(Dataset):
         spectrogram = spectrogram.repeat(1, 3, 1, 1)
         spectrogram = spectrogram.squeeze(0)
         
-        return spectrogram, image
-        
-        
-        #except Exception as e:
-        
-        #    print(f"Failed here: {e}")
-        
-        #    return self.__getitem__((idx + 1) % len(self))
-        
+        return spectrogram, image       
     
 
 

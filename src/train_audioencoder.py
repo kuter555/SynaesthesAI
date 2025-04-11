@@ -68,4 +68,10 @@ def train_audio_encoder(epochs=50):
             
 if __name__ == "__main__":
     
-    train_audio_encoder()
+    epochs = input("Please enter number of epochs: ")
+    try:
+        epochs = int(epochs)
+    except:
+        print("Invalid input - Defaulting to 10 Epochs")
+        epochs = 10
+    train_audio_encoder(epochs)
