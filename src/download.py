@@ -77,13 +77,13 @@ def download_single_image(image_url):
     
 class audio_downloader():
     
-    def __init__(self, folder_path="data/temp_song_archive/"):
+    def __init__(self, folder_path="../data/temp_song_archive/"):
         
         if not exists(folder_path):
             makedirs(folder_path)
         
-        if not exists("data/spectrograms/"):
-            makedirs("data/spectrograms/")
+        if not exists("../data/spectrograms/"):
+            makedirs("../data/spectrograms/")
         
         self.data = "../data/Music.csv"
         
