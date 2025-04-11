@@ -85,7 +85,7 @@ class audio_downloader():
         if not exists("data/spectrograms/"):
             makedirs("data/spectrograms/")
         
-        self.data = "data/Music.csv"
+        self.data = "../data/Music.csv"
         
         lim = input("Please enter quantity you want to download (max 65536): ")
         try:
