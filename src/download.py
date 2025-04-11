@@ -82,8 +82,10 @@ class audio_downloader():
         if not exists(folder_path):
             makedirs(folder_path)
         
-        if not exists("../data/spectrograms/"):
-            makedirs("../data/spectrograms/")
+        self.audio_folder = "../data/spectrograms"
+        
+        if not exists(self.audio_folder):
+            makedirs(self.audio_folder)
         
         self.data = "../data/Music.csv"
         
@@ -101,6 +103,10 @@ class audio_downloader():
         self.extract_data()
         self.download_tracks()
         
+        
+    def file_exists_in_folder(self, filename):
+        return exists(join(self.audio_folder, filename))
+    
         
     def extract_data(self):
         self.songs = []
@@ -144,15 +150,21 @@ class audio_downloader():
                 query = "-".join(track)
                 title=f"{track[0][:7].lower()}_{track[1][:7].lower()}"
                 
-                html = rq.urlopen(f"https://www.youtube.com/results?search_query={query}")
-                video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
+                try:
+                    if not self.file_exists_in_folder(f"{title}.npy"):
+                        html = rq.urlopen(f"https://www.youtube.com/results?search_query={query}")
+                        video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
 
-                if video_ids:
-                    url = "https://www.youtube.com/watch?v=" + video_ids[0]
-                    metadata = ydl.extract_info(url, download=False)
-                    downloaded_track = ydl.download([url])
-                    generate_spectrogram(self.folder_path, metadata["id"], title)
-                    self.delete_track(metadata["id"])
+                        if video_ids:
+                            url = "https://www.youtube.com/watch?v=" + video_ids[0]
+                            metadata = ydl.extract_info(url, download=False)
+                            downloaded_track = ydl.download([url])
+                            generate_spectrogram(self.folder_path, metadata["id"], title)
+                            self.delete_track(metadata["id"])
+                        
+                except:
+                    with open("errors.txt", "a") as f:
+                        f.write(f"\n{title}")
     
     
 
