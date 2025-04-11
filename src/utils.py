@@ -66,19 +66,13 @@ class CustomAudioImagePairing(Dataset):
         spectrogram = from_numpy(spectrogram).float()  # convert to tensor
         
         if spectrogram.ndim == 3:
-            print(f"We are here (3): {spectrogram.shape}")
             spectrogram = spectrogram.unsqueeze(0)
-            print(f"And now... (3): {spectrogram.shape}")
         elif spectrogram.ndim == 2:
-            print(f"We are here (2): {spectrogram.shape}")
             spectrogram = spectrogram.unsqueeze(0).unsqueeze(0)
-            print(f"And now... (2): {spectrogram.shape}")
             
         spectrogram = F.interpolate(spectrogram, size=(256, 256), mode='bilinear', align_corners=False)
         spectrogram = spectrogram.repeat(1, 3, 1, 1)
-        
         spectrogram = spectrogram.squeeze(0)
-        print("Final spectrogram shape: ", spectrogram.shape)
         
         return spectrogram, image
         

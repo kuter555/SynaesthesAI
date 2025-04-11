@@ -202,10 +202,16 @@ class VQVAE(nn.Module):
                  
                  beta=0.25):
         super(VQVAE, self).__init__()
+       
         
+        self.input_dim = input_dim
+        self.channels = channels
+        self.n_residual_blocks = n_residual_blocks
+        self.n_residual_dims = n_residual_dims
+        self.embedding_dim = embedding_dim
         self.num_embeddings = num_embeddings
+        self.beta = beta        
         
-        self.beta = beta
         
         self.bottom_encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
         self.top_encoder = Encoder(channels, channels, n_residual_blocks, n_residual_dims, stride=2)
@@ -222,7 +228,7 @@ class VQVAE(nn.Module):
         
         
     def forward(self, input):
-        quant_t, quant_b, diff, _, _ = self.encode(input)
+        quant_t, quant_b, diff, _, _, _, _ = self.encode(input)
         dec = self.decode(quant_t, quant_b)
 
         return dec, diff.mean() * self.beta
@@ -233,15 +239,13 @@ class VQVAE(nn.Module):
         enc_b = self.bottom_encoder(input)
         enc_t = self.top_encoder(enc_b)
 
+        
         quant_t = self.pre_codebook_top(enc_t).permute(0, 2, 3, 1)
         quant_t, diff_t, id_t = self.codebook_top(quant_t)
         quant_t = quant_t.permute(0, 3, 1, 2)
         diff_t = diff_t.unsqueeze(0)
 
         dec_t = self.top_decoder(quant_t)
-        
-        print(f"Enc_b shape: {enc_b.shape}")
-        print(f"Dec_t shape: {dec_t.shape}")
         enc_b = torch.cat([dec_t, enc_b], 1)
 
         quant_b = self.pre_codebook_bottom(enc_b).permute(0, 2, 3, 1)
