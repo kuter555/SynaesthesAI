@@ -6,6 +6,7 @@ from utils import print_progress_bar, CustomAudioImagePairing
 from pathlib import Path
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+base = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 
 # NEED TO GET DATASET OF THE IMAGES AND THE MATCHING AUDIO. THEN WE ENCODE THE AUDIO AND GIVE IT THAT FUNKY LOSS FUNCTION
 
@@ -13,24 +14,23 @@ def train_audio_encoder(epochs=50):
             
     # create a VQ-VAE to encode the audio with, not using the decoder
     AudioEncoder = VQVAE(input_dim=3)
-    AudioEncoder.to(device)
-    
     ImageEncoder = VQVAE(input_dim=3)
+    
     try:
-        ImageEncoder.load_state_dict(torch.load("../models/vae.pth", map_location=device))
+        ImageEncoder.load_state_dict(torch.load(f"{base}/models/vae.pth", map_location=device))
         ImageEncoder.to(device)
+        AudioEncoder.load_state_dict(torch.load(f"{base}/models/audioVAE.pth", map_location=device))
+        AudioEncoder.to(device)
+        
     except Exception as e:
         print(f"Failed to load existing VQ-VAE: {e}")
         return -1
-    
-    base_dir = Path(__file__).resolve().parent
 
-    # Safely build paths
-    audio_dir = base_dir.parent / "data" / "spectrograms"
-    image_dir = base_dir.parent / "data" / "downloaded_images"
+    audio_dir = f"{base}/data/spectrograms"
+    image_dir = f"{base}/data/downloaded_images"
     
     dataset = CustomAudioImagePairing(image_dir, audio_dir)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     optimiser = optim.Adam(AudioEncoder.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
@@ -48,6 +48,12 @@ def train_audio_encoder(epochs=50):
             # actual training    
             optimiser.zero_grad()
             audio_t, audio_b, _, _, _ = AudioEncoder.encode(spectrograms)
+            
+            print("\nImage_t (target) std:", image_t.std().item())
+            print("Audio_t (generated)std:", audio_t.std().item())
+            
+            print("\nImage_t (target) mean:", image_t.mean().item())
+            print("Audio_t (generated) mean:", audio_t.mean().item())
             
             # LOSS FUNCTION
             vector_loss_t = mse_loss(audio_t, image_t)

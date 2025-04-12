@@ -50,7 +50,16 @@ def test_audio_vqvae(root, audio_model, image_model):
         for i, (spectrograms, images) in enumerate(dataloader):
             
             audio_encoded_t, audio_encoded_b, _, _, _ = audio_vae.encode(spectrograms)
-            image_output = image_vae.decode(audio_encoded_t, audio_encoded_b)
+            
+            audio_t = (audio_encoded_t - -0.01742841675877571) / (0.13349851965904236 + 1e-5)
+            audio_t = audio_t * 0.24672505259513855 + -0.020536981523036957
+            
+            
+            audio_b = (audio_encoded_b - -0.01742841675877571) / (0.13349851965904236 + 1e-5)
+            audio_b = audio_b * 0.24672505259513855 + -0.020536981523036957
+            
+            
+            image_output = image_vae.decode(audio_t, audio_b)
     
             Image.fromarray((deconvolve(image_output[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}data/outputs/first_audio_test{i}.jpeg")
 

@@ -8,7 +8,7 @@ from utils import CustomImageFolder, print_progress_bar
 from vqvae import VQVAE, LatentLSTM, InheritedLatentLSTM
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 
 class LatentDataset(Dataset):
     def __init__(self, sequences):
@@ -41,9 +41,11 @@ class InheritedLatentDataset(Dataset):
 
 def train_lstm(num_epochs=100):
 
+    root = ".."
+
     model = VQVAE()
     try:
-        model.load_state_dict(torch.load("../models/vae.pth"))
+        model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
         model.to(device)
     
     except:
@@ -51,12 +53,8 @@ def train_lstm(num_epochs=100):
         return -1
     
     try:
-        top_latents = torch.load("../models/renewed_top_latents.pt").to(device)
-        bottom_latents = torch.load("../models/renewed_bottom_latents_1.pt").to(device)
-        
-        print(top_latents.dtype)     # should be torch.int64
-        print(top_latents.min())     # should be >= 0
-        print(top_latents.max())     
+        top_latents = torch.load(f"{root}/models/renewed_top_latents.pt").to(device)
+        bottom_latents_1 = torch.load(f"{root}/models/renewed_bottom_latents_1.pt").to(device)    
         
     except:
         print("Failed to load latents. Have you extracted them yet?...\n")
@@ -64,7 +62,7 @@ def train_lstm(num_epochs=100):
 
     vocab_size = model.num_embeddings    
     top_sequence = top_latents.view(top_latents.size(0), -1)
-    bottom_sequence = bottom_latents.view(bottom_latents.size(0), -1)
+    bottom_sequence = bottom_latents_1.view(bottom_latents_1.size(0), -1)
     
     t_dataset = LatentDataset(top_sequence)
     b_dataset = InheritedLatentDataset(bottom_sequence, top_sequence)   
@@ -111,8 +109,8 @@ def train_lstm(num_epochs=100):
             optimiser.step()
             
     try:
-        torch.save(lstm.state_dict(), "../models/t_lstm.pth")
-        torch.save(bottom_lstm.state_dict(), "../models/b_lstm.pth")
+        torch.save(lstm.state_dict(), f"{root}/models/t_lstm.pth")
+        torch.save(bottom_lstm.state_dict(), f"{root}/models/b_lstm.pth")
     except:
         print("\nFailed to save vae")
         
