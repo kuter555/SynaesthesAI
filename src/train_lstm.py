@@ -39,7 +39,7 @@ class InheritedLatentDataset(Dataset):
 
 
 
-def train_lstm(num_epochs=100):
+def train_lstm(num_epochs=100, load_top=False):
 
     root = ".."
 
@@ -75,28 +75,32 @@ def train_lstm(num_epochs=100):
     t_dataloader = DataLoader(t_dataset, batch_size=32, shuffle=True)
     b_dataloader = DataLoader(b_dataset, batch_size=32, shuffle=True)
     
-    # train the top lstm
-    for epoch in range(num_epochs):
-        
-        print_progress_bar("Top LSTM", epoch, num_epochs)
-        for batch in t_dataloader:
-            
-            inputs, targets = batch
-            inputs, targets = inputs.to(device).long(), targets.to(device).long()
-            
-            optimiser.zero_grad()
-            outputs, _ = lstm(inputs)
-            loss = criterion(outputs.view(-1, vocab_size), targets.view(-1))
-            loss.backward()
-            optimiser.step()
-        
-        
-        torch.cuda.empty_cache()
+    
+    if not load_top:
+    
+        # train the top lstm
+        for epoch in range(num_epochs):
 
-    try:
-        torch.save(lstm.state_dict(), f"{root}/models/t_lstm.pth")
-    except:
-        print("Couldn't save top lstm?")
+            print_progress_bar("Top LSTM", epoch, num_epochs)
+            for batch in t_dataloader:
+
+                inputs, targets = batch
+                inputs, targets = inputs.to(device).long(), targets.to(device).long()
+
+                optimiser.zero_grad()
+                outputs, _ = lstm(inputs)
+                loss = criterion(outputs.view(-1, vocab_size), targets.view(-1))
+                loss.backward()
+                optimiser.step()
+
+
+            torch.cuda.empty_cache()
+
+        try:
+            torch.save(lstm.state_dict(), f"{root}/models/t_lstm.pth")
+        except:
+            print("Couldn't save top lstm?")
+       
         
     # train the bottom LSTM
     for epoch in range(num_epochs):
