@@ -163,9 +163,7 @@ class audio_downloader():
                             self.delete_track(metadata["id"])
                         
                 except:
-                    with open("errors.txt", "a") as f:
-                        f.write(f"\n{title}")
-    
+                    continue
     
 
 if __name__ == "__main__":
