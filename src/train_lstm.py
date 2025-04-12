@@ -170,5 +170,10 @@ if __name__ == "__main__":
         extract_latent_codes()
     
     else:
-        train_lstm()
+        
+        x = input("Do you want to skip training the top (Y)? ")
+        if x.lower() == "y":
+            train_lstm(load_top=True)
+        else:
+            train_lstm(load_top=False)
     
