@@ -48,8 +48,8 @@ def train_lstm(num_epochs=100, load_top=False):
         model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
         model.to(device)
     
-    except:
-        print("Failed to run. Exiting...")
+    except Exception as e:
+        print(f"Failed to run: {e} Exiting...")
         return -1
     
     try:
