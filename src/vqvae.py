@@ -52,7 +52,10 @@ class InheritedLatentLSTM(nn.Module):
     def forward(self, x, y, h=None):
         x = self.embedding(x)
         y = self.embedding(y)
-        full_input = torch.cat((x, y), dim=-1)
+        
+        top_seq_expanded = y.unsqueeze(1).expand(-1, x.size(1), -1)
+        full_input = torch.cat((x, top_seq_expanded), dim=-1)
+                
         out, h = self.lstm(full_input, h)
         out = self.fc(out)
         return out, h

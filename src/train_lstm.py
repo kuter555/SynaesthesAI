@@ -79,7 +79,6 @@ def train_lstm(num_epochs=100):
     for epoch in range(num_epochs):
         
         print_progress_bar("Top LSTM", epoch, num_epochs)
-        
         for batch in t_dataloader:
             
             inputs, targets = batch
@@ -90,8 +89,15 @@ def train_lstm(num_epochs=100):
             loss = criterion(outputs.view(-1, vocab_size), targets.view(-1))
             loss.backward()
             optimiser.step()
+        
+        
+        torch.cuda.empty_cache()
 
-
+    try:
+        torch.save(lstm.state_dict(), f"{root}/models/t_lstm.pth")
+    except:
+        print("Couldn't save top lstm?")
+        
     # train the bottom LSTM
     for epoch in range(num_epochs):
         print_progress_bar("Bottom LSTM", epoch, num_epochs)
@@ -107,14 +113,13 @@ def train_lstm(num_epochs=100):
             loss = criterion(outputs.view(-1, vocab_size), bottom_targets.view(-1))
             loss.backward()
             optimiser.step()
+        
+        torch.cuda.empty_cache()
             
     try:
-        torch.save(lstm.state_dict(), f"{root}/models/t_lstm.pth")
         torch.save(bottom_lstm.state_dict(), f"{root}/models/b_lstm.pth")
     except:
-        print("\nFailed to save vae")
-        
-    torch.cuda.empty_cache()
+        print("\nFailed to save LSTM")
 
 
 def extract_latent_codes():
