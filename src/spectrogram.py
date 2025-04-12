@@ -22,3 +22,5 @@ def generate_spectrogram(folder, id, name):
     S = librosa.feature.melspectrogram(y=y_seg, sr=sr, fmax=12000)
     S_dB = librosa.power_to_db(S, ref=np.max)
     np.save(f"../data/spectrograms/{name}.npy", S_dB)  # Save as NumPy array
+    
+    
