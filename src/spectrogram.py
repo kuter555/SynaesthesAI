@@ -2,9 +2,16 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+
 
 
 def generate_spectrogram(folder, id, name):
+
+    
+    if not sys.warnoptions:
+        import warnings
+        warnings.simplefilter("ignore")
 
     y, sr = librosa.load(f"{folder}{id}.mp3")
     
