@@ -59,6 +59,9 @@ def train_lstm(num_epochs=100, load_top=False):
     except:
         print("Failed to load latents. Have you extracted them yet?...\n")
         return -1
+    
+    torch.cuda.empty_cache()
+    
 
     vocab_size = model.num_embeddings    
     top_sequence = top_latents.view(top_latents.size(0), -1)
@@ -76,8 +79,8 @@ def train_lstm(num_epochs=100, load_top=False):
     b_dataloader = DataLoader(b_dataset, batch_size=32, shuffle=True)
     
     
-    if not load_top:
     
+    if not load_top:
         # train the top lstm
         for epoch in range(num_epochs):
 
@@ -92,7 +95,6 @@ def train_lstm(num_epochs=100, load_top=False):
                 loss = criterion(outputs.view(-1, vocab_size), targets.view(-1))
                 loss.backward()
                 optimiser.step()
-
 
             torch.cuda.empty_cache()
 
