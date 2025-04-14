@@ -57,7 +57,7 @@ def train_lstm(num_epochs=100, load_top=False):
         top_latents = torch.load(f"{root}/models/renewed_top_latents.pt").to(device)
         bottom_latents_1 = torch.load(f"{root}/models/renewed_bottom_latents_1.pt").to(device)    
         
-    except:
+    except Exception as e:
         print(f"Error: {e}\n Failed to load latents. Have you extracted them yet?...\n")
         return -1
 
