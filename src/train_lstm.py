@@ -43,6 +43,7 @@ def train_lstm(num_epochs=100, load_top=False):
 
     root = ".."
 
+    torch.cuda.empty_cache()
     model = VQVAE()
     try:
         model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
@@ -57,11 +58,8 @@ def train_lstm(num_epochs=100, load_top=False):
         bottom_latents_1 = torch.load(f"{root}/models/renewed_bottom_latents_1.pt").to(device)    
         
     except:
-        print("Failed to load latents. Have you extracted them yet?...\n")
+        print(f"Error: {e}\n Failed to load latents. Have you extracted them yet?...\n")
         return -1
-    
-    torch.cuda.empty_cache()
-    
 
     vocab_size = model.num_embeddings    
     top_sequence = top_latents.view(top_latents.size(0), -1)
@@ -77,8 +75,6 @@ def train_lstm(num_epochs=100, load_top=False):
     
     t_dataloader = DataLoader(t_dataset, batch_size=32, shuffle=True)
     b_dataloader = DataLoader(b_dataset, batch_size=32, shuffle=True)
-    
-    
     
     if not load_top:
         # train the top lstm
@@ -102,7 +98,6 @@ def train_lstm(num_epochs=100, load_top=False):
             torch.save(lstm.state_dict(), f"{root}/models/t_lstm.pth")
         except:
             print("Couldn't save top lstm?")
-       
         
     # train the bottom LSTM
     for epoch in range(num_epochs):
