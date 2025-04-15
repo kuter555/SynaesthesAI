@@ -102,7 +102,7 @@ def train_lstm(num_epochs=100, load_top=False):
     # train the bottom LSTM
     for epoch in range(num_epochs):
         print_progress_bar("Bottom LSTM", epoch, num_epochs)
-        for top_seq, bottom_inputs, bottom_targets in b_dataloader:
+        for i, (top_seq, bottom_inputs, bottom_targets) in enumerate(b_dataloader):
             top_seq, bottom_inputs, bottom_targets = (
                 top_seq.to(device),
                 bottom_inputs.to(device),
@@ -114,13 +114,13 @@ def train_lstm(num_epochs=100, load_top=False):
             loss = criterion(outputs.view(-1, vocab_size), bottom_targets.view(-1))
             loss.backward()
             optimiser.step()
-        
+            
         torch.cuda.empty_cache()
             
-    try:
-        torch.save(bottom_lstm.state_dict(), f"{root}/models/b_lstm.pth")
-    except:
-        print("\nFailed to save LSTM")
+        try:
+            torch.save(bottom_lstm.state_dict(), f"{root}/models/b_lstm.pth")
+        except:
+            print("\nFailed to save LSTM")
 
 
 def extract_latent_codes():
