@@ -1,11 +1,60 @@
 import sys
 from torchvision import transforms
+import torch
 from torch import from_numpy
 from torch.utils.data import Dataset
 import torch.nn.functional as F
 import os
 from PIL import Image
 import numpy as np
+
+
+class HierarchicalLatentDataset(Dataset):
+    def __init__(self, top_seqs, bottom_seqs):
+        self.top_seqs = top_seqs  # shape: (N, 1024)
+        self.bottom_seqs = bottom_seqs  # shape: (N, 4096)
+
+    def __len__(self):
+        return len(self.top_seqs)
+
+    def __getitem__(self, idx):
+        top = self.top_seqs[idx]
+        bottom = self.bottom_seqs[idx]
+
+        input_ids = torch.cat([top, bottom], dim=0)
+        target_ids = torch.cat([
+            torch.full_like(top, -100),  # mask top tokens from loss
+            bottom
+        ], dim=0)
+
+        return input_ids, target_ids
+
+
+class LatentDataset(Dataset):
+    def __init__(self, sequences):
+        self.data = sequences
+        
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        sequence = self.data[idx]
+        return sequence[:-1], sequence[1:]
+
+# need this one conditioned off of the top dataset
+class InheritedLatentDataset(Dataset):
+    def __init__(self, b_sequences, sequences):
+        self.b_sequences = b_sequences
+        self.sequences = sequences
+    
+    def __len__(self):
+        return len(self.b_sequences)
+    
+    def __getitem__(self, idx):
+        b_sequence = self.b_sequences[idx]
+        sequence = self.sequences[idx]
+        return sequence, b_sequence[:-1], b_sequence[1:]    
+    
 
 class CustomAudioImagePairing(Dataset):
     

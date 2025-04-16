@@ -4,40 +4,11 @@ from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-from utils import CustomImageFolder, print_progress_bar, deconvolve
+from utils import CustomImageFolder, print_progress_bar, deconvolve, LatentDataset, InheritedLatentDataset
 from vqvae import VQVAE, LatentLSTM, InheritedLatentLSTM
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
-
-class LatentDataset(Dataset):
-    def __init__(self, sequences):
-        self.data = sequences
-        
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        sequence = self.data[idx]
-        return sequence[:-1], sequence[1:]
-
-
-# need this one conditioned off of the top dataset
-class InheritedLatentDataset(Dataset):
-    def __init__(self, b_sequences, sequences):
-        self.b_sequences = b_sequences
-        self.sequences = sequences
-    
-    def __len__(self):
-        return len(self.b_sequences)
-    
-    def __getitem__(self, idx):
-        b_sequence = self.b_sequences[idx]
-        sequence = self.sequences[idx]
-        return sequence, b_sequence[:-1], b_sequence[1:]    
-    
-
-
 
 def train_lstm(num_epochs=100, load_top=False):
 
@@ -122,7 +93,6 @@ def train_lstm(num_epochs=100, load_top=False):
         except:
             print("\nFailed to save LSTM")
 
-
 def extract_latent_codes():
     
     print("Beginning Extraction")
@@ -159,8 +129,6 @@ def extract_latent_codes():
             
     print("Latents successfully saved!")
     
-
-
 def decode():
     
     torch.cuda.empty_cache()
@@ -187,7 +155,6 @@ def decode():
         recon = model.decode_code(top_latents, bottom_latents)
         Image.fromarray((deconvolve(recon[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}/data/test_images/lstm_test.jpeg")
     
-
 def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
     
     lstm.eval()
@@ -231,8 +198,6 @@ def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
             input_seq = next_token.unsqueeze(0)
     
     return top_generated, torch.tensor(bottom_generated, device=device)
-
-    
     
     
 

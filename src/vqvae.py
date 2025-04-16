@@ -1,10 +1,8 @@
-import numpy as np
-
 import torch
 from torch import nn
 from torch.nn import functional as F
 import custom_distributed as dist_fn
-
+from transformers import GPT2Config, GPT2LMHeadModel
 # WOAH: https://github.com/BhanuPrakashPebbeti/Image-Generation-Using-VQVAE/blob/main/vqvae-gpt.ipynb
 
 # WOAH: https://github.com/rosinality/vq-vae-2-pytorch/blob/master/vqvae.py
@@ -28,6 +26,7 @@ import custom_distributed as dist_fn
 
 # Borrowed from https://github.com/deepmind/sonnet and ported it to PyTorch
 
+
 class LatentLSTM(nn.Module):
     def __init__(self, vocab_dim, embedding_dim, hidden_dim, layers):
         super(LatentLSTM, self).__init__()
@@ -41,7 +40,6 @@ class LatentLSTM(nn.Module):
         out = self.fc(out)
         return out, h
       
-        
 class InheritedLatentLSTM(nn.Module):
     def __init__(self, vocab_dim, embedding_dim, hidden_dim, layers):
         super(InheritedLatentLSTM, self).__init__()
@@ -68,6 +66,42 @@ class InheritedLatentLSTM(nn.Module):
         out = self.fc(out)
         return out, h
         
+
+class LatentGPT(nn.Module):
+    def __init__(self, vocab_size, embedding_dim=512, n_layer=6, n_head=8):
+        super().__init__()
+        config = GPT2Config(
+            vocab_size=vocab_size,
+            n_positions=4096,  # max length you expect (top: 1024, bottom: 4096)
+            n_ctx=4096,
+            n_embd=embedding_dim,
+            n_layer=n_layer,
+            n_head=n_head,
+            use_cache=False,
+        )
+        self.transformer = GPT2LMHeadModel(config)
+
+    def forward(self, input_ids):
+        return self.transformer(input_ids).logits
+
+
+class BottomGPT(nn.Module):
+    def __init__(self, vocab_size, embedding_dim=512, n_layer=12, n_head=8):
+        super().__init__()
+        config = GPT2Config(
+            vocab_size=vocab_size,
+            n_positions=5120,  # enough room for [top | bottom]
+            n_ctx=5120,
+            n_embd=embedding_dim,
+            n_layer=n_layer,
+            n_head=n_head,
+        )
+        self.model = GPT2LMHeadModel(config)
+
+    def forward(self, input_ids):
+        return self.model(input_ids).logits
+
+
 
 
 class Quantize(nn.Module):
