@@ -3,8 +3,8 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
-
-from utils import CustomImageFolder, print_progress_bar
+from PIL import Image
+from utils import CustomImageFolder, print_progress_bar, deconvolve
 from vqvae import VQVAE, LatentLSTM, InheritedLatentLSTM
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -160,11 +160,90 @@ def extract_latent_codes():
     print("Latents successfully saved!")
     
 
+
+def decode():
+    
+    torch.cuda.empty_cache()
+    model = VQVAE()
+    try:
+        model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
+        model.to(device)       
+        
+        top_lstm = LatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
+        top_lstm.load_state_dict(torch.load(f"{root}/models/t_lstm.pth", map_location=device))
+
+        bottom_lstm = InheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
+        bottom_lstm.load_state_dict(torch.load(f"{root}/models/b_lstm.pth", map_location=device))
+    
+    except Exception as e:
+        print(f"Failed to run: {e} Exiting...")
+        return -1
+    
+    top_latents, bottom_latents = sample_latents(top_lstm, bottom_lstm, 0, 65536)
+    
+    top_latents = top_latents.view(1, 32, 32)
+    bottom_latents = bottom_latents.view(1, 64, 64)
+    with torch.no_grad():
+        recon = model.decode_code(top_latents, bottom_latents)
+        Image.fromarray((deconvolve(recon[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}/data/test_images/lstm_test.jpeg")
+    
+
+def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
+    
+    lstm.eval()
+    bottom_lstm.eval()
+    
+    top_sequence_length = 32 * 32
+    bottom_sequence_length = 64 * 64
+    
+    try:
+        top_latents = torch.load(f"{root}/models/renewed_top_latents.pt").to(device)
+        top_sequence = top_latents.view(top_latents.size(0), -1)
+    except Exception as e:
+        print(f"Error: {e}, couldn't extract latents...")
+        return -1, -1
+
+    t_dataset = LatentDataset(top_sequence)    
+    start_token, _ = t_dataset[0]
+    start_token = start_token[0].item()
+
+    top_generated = [start_token]
+    input_seq = torch.tensor([[start_token]], device=device).long()
+    hidden = None
+
+    for _ in range(top_sequence_length - 1):
+        with torch.no_grad():
+            output, hidden = lstm(input_seq, hidden)
+            top_generated.append(next_token.item())
+            input_seq = next_token
+
+    top_generated = torch.tensor(top_generated, device=device).unsqueeze(0).long()  # shape: (1, sequence_length)
+    bottom_generated = []
+    input_seq = torch.zeros((1, 1), device=device).long()  # Start with some neutral token
+    hidden = None
+
+    for _ in range(bottom_sequence_length):  # 64 * 64 = 4096
+        with torch.no_grad():
+            output, hidden = bottom_lstm(input_seq, top_generated, hidden)
+            probs = torch.softmax(output[:, -1, :] / temperature, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)
+            bottom_generated.append(next_token.item())
+            input_seq = next_token.unsqueeze(0)
+    
+    return top_generated, torch.tensor(bottom_generated, device=device)
+
+    
+    
+    
+
 if __name__ == "__main__":
     
-    answer = input("Would you like to Extract Latents (1) or Train the LSTM (2)? > ")
+    answer = input("Would you like to Extract Latents (1) or Train the LSTM (2), or Decode (3)? > ")
     if answer == "1":
         extract_latent_codes()
+    
+    elif answer == "3":
+        decode()
     
     else:
         

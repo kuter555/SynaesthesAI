@@ -50,15 +50,19 @@ class InheritedLatentLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, vocab_dim)
         
     def forward(self, x, y, h=None):
+        
+        
         x = self.embedding(x)
         y = self.embedding(y)
         
-        
         repeat_factor = x.size(1) // y.size(1) + 1  # Ensures it's long enough
         y_repeated = y.repeat_interleave(repeat_factor, dim=1)  # [32, ~4096, 512]
-        y_resized = y_repeated[:, :x.size(1), :]         
+        y_resized = y_repeated[:, :x.size(1), :]  
+        
+        if x.dim() > 3:
+            x = x.squeeze(2)       
+               
         full_input = torch.cat((x, y_resized), dim=-1)  # [32, 4095, 1024]
-
                 
         out, h = self.lstm(full_input, h)
         out = self.fc(out)
@@ -230,7 +234,7 @@ class VQVAE(nn.Module):
         
         
     def forward(self, input):
-        quant_t, quant_b, diff, _, _, _, _ = self.encode(input)
+        quant_t, quant_b, diff, _, _, = self.encode(input)
         dec = self.decode(quant_t, quant_b)
 
         return dec, diff.mean() * self.beta
@@ -241,7 +245,6 @@ class VQVAE(nn.Module):
         enc_b = self.bottom_encoder(input)
         enc_t = self.top_encoder(enc_b)
 
-        
         quant_t = self.pre_codebook_top(enc_t).permute(0, 2, 3, 1)
         quant_t, diff_t, id_t = self.codebook_top(quant_t)
         quant_t = quant_t.permute(0, 3, 1, 2)
