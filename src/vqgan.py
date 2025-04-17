@@ -70,16 +70,16 @@ def train(load=False):
     print("Beginning training")
 
     for epoch in range(epochs):
-        
-        print_progress_bar("", epoch, epochs)
-        
-        loop = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}")
-        for real_images in loop:
-            real_images = real_images.to(device)
+                
+        for i, (images, _) in enumerate(dataloader):
+            
+            print_progress_bar(epoch, i, len(dataloader))
+            
+            images = images.to(device)
 
-            recon_images, vq_loss = vqvae(real_images)
+            recon_images, vq_loss = vqvae(images)
 
-            D_real = D(real_images)
+            D_real = D(images)
             D_fake = D(recon_images.detach())
             d_loss = F.binary_cross_entropy_with_logits(D_real, torch.ones_like(D_real)) + \
                      F.binary_cross_entropy_with_logits(D_fake, torch.zeros_like(D_fake))
@@ -89,23 +89,16 @@ def train(load=False):
             d_opt.step()
 
             gan_loss = F.binary_cross_entropy_with_logits(D(recon_images), torch.ones_like(D_fake))
-            recon_loss = F.l1_loss(recon_images, real_images)
+            recon_loss = F.l1_loss(recon_images, images)
 
             if use_perceptual:
-                recon_loss += perceptual_loss_fn(recon_images, real_images)
+                recon_loss += perceptual_loss_fn(recon_images, images)
 
             total_loss = recon_loss + beta * vq_loss + gan_weight * gan_loss
 
             g_opt.zero_grad()
             total_loss.backward()
             g_opt.step()
-
-            loop.set_postfix({
-                "d_loss": d_loss.item(),
-                "vq_loss": vq_loss.item(),
-                "recon": recon_loss.item(),
-                "gan": gan_loss.item()
-            })
 
         torch.save(vqvae.state_dict(), f"{root}/models/vqgan.pth")
 
