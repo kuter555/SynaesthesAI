@@ -12,7 +12,9 @@ from os import makedirs, rename, remove
 from os.path import join, exists
 
 from utils import print_progress_bar
-from spectrogram import generate_spectrogram
+from spectrogram import generate_spectrogram, generate_spectrogram_plt
+
+root = ".."
 
 class cover_art_downloader:
 
@@ -71,23 +73,21 @@ def download_entire_file():
 def download_single_image(image_url):
     download = cover_art_downloader(["TEST_IMAGE"], ["2_TEST_TITLE"], [image_url], ".test_images")
     download.begin_download()
-    
-    
-    
-    
+     
+     
 class audio_downloader():
     
-    def __init__(self, folder_path="../data/temp_song_archive/"):
+    def __init__(self, folder_path= f"{root}/data/temp_song_archive/"):
         
         if not exists(folder_path):
             makedirs(folder_path)
         
-        self.audio_folder = "../data/spectrograms"
+        self.audio_folder = f"{root}/data/spectrograms"
         
         if not exists(self.audio_folder):
             makedirs(self.audio_folder)
         
-        self.data = "../data/Music.csv"
+        self.data = f"{root}/data/Music.csv"
         
         lim = input("Please enter quantity you want to download (max 65536): ")
         try:
@@ -132,6 +132,7 @@ class audio_downloader():
             "format": "bestaudio/best",
             "outtmpl": f"{path}/%(id)s.%(ext)s",
             "ignoreerrors": True,
+            "cookies": f"{root}/data/cookies.txt",
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -159,7 +160,7 @@ class audio_downloader():
                             url = "https://www.youtube.com/watch?v=" + video_ids[0]
                             metadata = ydl.extract_info(url, download=False)
                             downloaded_track = ydl.download([url])
-                            generate_spectrogram(self.folder_path, metadata["id"], title)
+                            generate_spectrogram_plt(self.folder_path, metadata["id"], title)
                             self.delete_track(metadata["id"])
                         
                 except:

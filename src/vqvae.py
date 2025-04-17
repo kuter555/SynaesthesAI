@@ -66,7 +66,6 @@ class InheritedLatentLSTM(nn.Module):
         out = self.fc(out)
         return out, h
         
-
 class LatentGPT(nn.Module):
     def __init__(self, vocab_size, embedding_dim=512, n_layer=6, n_head=8):
         super().__init__()
@@ -84,7 +83,6 @@ class LatentGPT(nn.Module):
     def forward(self, input_ids):
         return self.transformer(input_ids).logits
 
-
 class BottomGPT(nn.Module):
     def __init__(self, vocab_size, embedding_dim=512, n_layer=12, n_head=8):
         super().__init__()
@@ -101,7 +99,50 @@ class BottomGPT(nn.Module):
     def forward(self, input_ids):
         return self.model(input_ids).logits
 
+class TransformerBlock(nn.Module):
+    def __init__(self, dim, heads):
+        super().__init__()
+        self.attn = nn.MultiheadAttention(embed_dim=dim, num_heads=heads, batch_first=True)
+        self.norm1 = nn.LayerNorm(dim)
+        self.ff = nn.Sequential(
+            nn.Linear(dim, dim * 4),
+            nn.GELU(),
+            nn.Linear(dim * 4, dim)
+        )
+        self.norm2 = nn.LayerNorm(dim)
 
+    def forward(self, x, mask):
+        # Self-attention with causal mask
+        x2, _ = self.attn(self.norm1(x), self.norm1(x), self.norm1(x), attn_mask=mask)
+        x = x + x2
+        x = x + self.ff(self.norm2(x))
+        return x
+
+def generate_causal_mask(size):
+    return torch.triu(torch.ones(size, size) * float('-inf'), diagonal=1)
+
+class TinyGPT(nn.Module):
+    def __init__(self, vocab_size, seq_len, dim=512, depth=6, heads=8):
+        super().__init__()
+        self.token_embed = nn.Embedding(vocab_size, dim)
+        self.pos_embed = nn.Parameter(torch.randn(1, seq_len, dim))
+        self.blocks = nn.ModuleList([
+            TransformerBlock(dim, heads) for _ in range(depth)
+        ])
+        self.norm = nn.LayerNorm(dim)
+        self.output_proj = nn.Linear(dim, vocab_size)
+
+    def forward(self, x):
+        B, T = x.shape
+        x = self.token_embed(x) + self.pos_embed[:, :T]
+        mask = generate_causal_mask(T).to(x.device)
+
+        for block in self.blocks:
+            x = block(x, mask)
+
+        x = self.norm(x)
+        logits = self.output_proj(x)
+        return logits
 
 
 class Quantize(nn.Module):

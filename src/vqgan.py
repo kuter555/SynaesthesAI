@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 from torchvision.models import vgg16
-from torchvision import transforms
 from tqdm import tqdm
 
 from vqvae import VQVAE

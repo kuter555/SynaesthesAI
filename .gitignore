@@ -2,5 +2,11 @@
 __pycache__
 .test_images
 todo.txt
-data/*
+data/downloaded_images/
+data/outputs/
+data/spectrograms/
+data/temp_song_archive/
+data/test_images/
+data/errors.txt
+data/Music.csv
 models/*

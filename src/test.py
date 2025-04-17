@@ -10,8 +10,6 @@ root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Projec
 audio_model = f"{root}models/audioVAE.pth"
 image_model = f"{root}models/vae.pth"
 
-print(image_model)
-
 def test_vqvae(input_model):
     
     if not os.path.exists(input_model):    
@@ -72,7 +70,7 @@ def test_audio_vqvae(root, audio_model, image_model):
 if __name__ == "__main__":
     
     print("Testing novel image generation...")
-    test_vqvae(image_model)
+    test_audio_vqvae(root, "models/audioVAE.pth", "models/vae.pth")
     
     #test_audio_vqvae(root, audio_model, image_model)
     print("Done")
