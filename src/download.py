@@ -160,7 +160,7 @@ class audio_downloader():
                             url = "https://www.youtube.com/watch?v=" + video_ids[0]
                             metadata = ydl.extract_info(url, download=False)
                             downloaded_track = ydl.download([url])
-                            generate_spectrogram_plt(self.folder_path, metadata["id"], title)
+                            generate_spectrogram(self.folder_path, metadata["id"], title)
                             self.delete_track(metadata["id"])
                         
                 except:
