@@ -59,7 +59,7 @@ def train(load=True):
     
     model = VQVAE()
     if(load):
-        model.load_state_dict(torch.load("{root}/models/vae.pth", map_location=device))
+        model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
     model.to(device)
 
     for epoch in range(epochs):
