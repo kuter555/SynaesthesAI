@@ -15,6 +15,8 @@ def train_gpt(num_epochs=100):
     
     root = ".."
     
+    
+    print("Pre training")
     torch.cuda.empty_cache()
     vqvae = VQVAE()    
     try:
@@ -26,6 +28,7 @@ def train_gpt(num_epochs=100):
         print(f"Failed to run: {e} Exiting...")
         return -1
     
+    print("Loaded latents")
     top_sequence = top_latents.view(top_latents.size(0), -1)
     bottom_sequence = bottom_latents_1.view(bottom_latents_1.size(0), -1)
     
@@ -39,6 +42,8 @@ def train_gpt(num_epochs=100):
     b_model = BottomGPT(vocab_size=vqvae.num_embeddings).to(device)
     t_optimiser = torch.optim.Adam(t_model.parameters(), lr=1e-4)
     b_optimiser = torch.optim.Adam(b_model.parameters(), lr=1e-4)
+    
+    print("Established optimsers and datasets")
     
     for epoch in range(num_epochs):
         

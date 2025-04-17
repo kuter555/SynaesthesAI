@@ -6,8 +6,6 @@ from transformers import GPT2Config, GPT2LMHeadModel
 # WOAH: https://github.com/BhanuPrakashPebbeti/Image-Generation-Using-VQVAE/blob/main/vqvae-gpt.ipynb
 
 # WOAH: https://github.com/rosinality/vq-vae-2-pytorch/blob/master/vqvae.py
-
-
 # Copyright 2018 The Sonnet Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +20,6 @@ from transformers import GPT2Config, GPT2LMHeadModel
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
 
 # Borrowed from https://github.com/deepmind/sonnet and ported it to PyTorch
 
