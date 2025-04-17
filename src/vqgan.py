@@ -8,7 +8,7 @@ from vqvae import VQVAE
 from utils import print_progress_bar, CustomImageFolder, deconvolve
     
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI" 
+root = ".."
 epochs = 100
 batch_size = 32
 learning_rate = 2e-4
@@ -59,7 +59,7 @@ def train(load=True):
     
     model = VQVAE()
     if(load):
-        model.load_state_dict(torch.load("models/vae.pth", map_location=device))
+        model.load_state_dict(torch.load("{root}/models/vae.pth", map_location=device))
     model.to(device)
 
     for epoch in range(epochs):
