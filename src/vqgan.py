@@ -45,7 +45,10 @@ class PerceptualLoss(nn.Module):
         return F.l1_loss(x_vgg, y_vgg)
     
     
-def train(load=True):    
+def train(load=False):
+    
+    print("Beginning training VQGAN")
+    
     vqvae = VQVAE().to(device)
     D = Discriminator().to(device)
     perceptual_loss_fn = PerceptualLoss() if use_perceptual else None
@@ -57,10 +60,14 @@ def train(load=True):
     dataset = CustomImageFolder(f"{root}/data/downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
+    print("Loaded data")
+    
     model = VQVAE()
     if(load):
-        model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
+        model.load_state_dict(torch.load(f"{root}/models/vqgan.pth", map_location=device))
     model.to(device)
+
+    print("Beginning training")
 
     for epoch in range(epochs):
         
