@@ -119,4 +119,8 @@ if __name__ == "__main__":
     load = False
     if answer == "1":
         load = True
+        
+    name = input("Please enter the name of your model: ")
+    if name.split(".")[-1] != "pth":
+        name = name + ".pth"        
     train(load)
