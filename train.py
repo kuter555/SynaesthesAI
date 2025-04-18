@@ -39,7 +39,6 @@ def train_vae(epochs=10, load=False):
             loss.backward()
             optimiser.step()
             
-            
             # Display images every 500 batches
             if i % 100 == 0:
                 with torch.no_grad():

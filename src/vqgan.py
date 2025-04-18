@@ -10,13 +10,13 @@ from utils import print_progress_bar, CustomImageFolder, deconvolve
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = ".."
 epochs = 1000
-batch_size = 32
-learning_rate = 2e-4
-beta = 0.25            # Codebook commitment
-gan_weight = 0.8       # Weight of GAN loss
+batch_size = 64
+learning_rate = 1e-4
+beta = 0.30            # Codebook commitment
+gan_weight = 0.7       # Weight of GAN loss
 use_perceptual = False # Toggle if you want to try VGG-based perceptual loss
 image_size = 256
-
+freeze_epochs = 10
 
 class Discriminator(nn.Module):
     def __init__(self, in_channels=3, ndf=64):
@@ -48,57 +48,70 @@ class PerceptualLoss(nn.Module):
 def train(load=False):
     
     print("Beginning Loading VQGAN")
-    
     vqvae = VQVAE()
+    D = Discriminator()
+    
     if(load):
-        vqvae.load_state_dict(torch.load(f"{root}/models/vqgan.pth", map_location=device))
+        vqvae.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
+        for param in vqvae.parameters():
+            param.requires_grad = False
+    
+    D.to(device)
     vqvae.to(device)
-    D = Discriminator().to(device)
     perceptual_loss_fn = PerceptualLoss() if use_perceptual else None
 
     # Optimizers
-    g_opt = torch.optim.Adam(vqvae.parameters(), lr=learning_rate)
-    d_opt = torch.optim.Adam(D.parameters(), lr=learning_rate)
+    optimiser = torch.optim.Adam(vqvae.parameters(), lr=learning_rate)
+    gan_optimiser = torch.optim.Adam(D.parameters(), lr=learning_rate)
+    mse_loss = torch.nn.MSELoss()
 
     dataset = CustomImageFolder(f"{root}/data/downloaded_images")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
-    print("Loaded data")
-
     print("Beginning training")
 
     for epoch in range(epochs):
+        
+        if epoch == freeze_epochs:
+            print(f"Unfreezing VQ-VAE at epoch {epoch}")
+            for param in vqvae.parameters():
+                param.requires_grad = True
                 
         for i, (images, _) in enumerate(dataloader):
             
             print_progress_bar(epoch, i, len(dataloader))
-            
+                        
+            # convert images for pytorch
             images = images.to(device)
+            
+            # actual training
+            recon_images, codebook_loss = vqvae(images)
 
-            recon_images, vq_loss = vqvae(images)
+            # gan training
+            gan_real = D(images)
+            gan_fake = D(recon_images.detach())
+            gan_loss = F.binary_cross_entropy_with_logits(gan_real, torch.ones_like(gan_real)) + \
+                     F.binary_cross_entropy_with_logits(gan_fake, torch.zeros_like(gan_fake))
 
-            D_real = D(images)
-            D_fake = D(recon_images.detach())
-            d_loss = F.binary_cross_entropy_with_logits(D_real, torch.ones_like(D_real)) + \
-                     F.binary_cross_entropy_with_logits(D_fake, torch.zeros_like(D_fake))
+            recon_loss = mse_loss(recon_images, images)
 
-            d_opt.zero_grad()
-            d_loss.backward()
-            d_opt.step()
+            gan_optimiser.zero_grad()
+            gan_loss.backward()
+            gan_optimiser.step()
 
-            gan_loss = F.binary_cross_entropy_with_logits(D(recon_images), torch.ones_like(D_fake))
+            gan_loss = F.binary_cross_entropy_with_logits(D(recon_images), torch.ones_like(gan_fake))
             recon_loss = F.l1_loss(recon_images, images)
 
             if use_perceptual:
                 recon_loss += perceptual_loss_fn(recon_images, images)
 
-            total_loss = recon_loss + beta * vq_loss + gan_weight * gan_loss
+            total_loss = recon_loss + beta * codebook_loss + gan_weight * gan_loss
 
-            g_opt.zero_grad()
+            optimiser.zero_grad()
             total_loss.backward()
-            g_opt.step()
-
-        torch.save(vqvae.state_dict(), f"{root}/models/vqgan.pth")
+            optimiser.step()
+        
+        torch.save({'vqgan': vqvae.state_dict(), 'discriminator': D.state_dict()}, f'{root}/models/vqgan_network.pth')
 
 
 if __name__ == "__main__":
