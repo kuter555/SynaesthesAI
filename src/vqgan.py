@@ -9,7 +9,7 @@ from utils import print_progress_bar, CustomImageFolder, deconvolve
     
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = ".."
-epochs = 100
+epochs = 1000
 batch_size = 32
 learning_rate = 2e-4
 beta = 0.25            # Codebook commitment
@@ -47,9 +47,12 @@ class PerceptualLoss(nn.Module):
     
 def train(load=False):
     
-    print("Beginning training VQGAN")
+    print("Beginning Loading VQGAN")
     
-    vqvae = VQVAE().to(device)
+    vqvae = VQVAE()
+    if(load):
+        vqvae.load_state_dict(torch.load(f"{root}/models/vqgan.pth", map_location=device))
+    vqvae.to(device)
     D = Discriminator().to(device)
     perceptual_loss_fn = PerceptualLoss() if use_perceptual else None
 
@@ -61,11 +64,6 @@ def train(load=False):
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     print("Loaded data")
-    
-    model = VQVAE()
-    if(load):
-        model.load_state_dict(torch.load(f"{root}/models/vqgan.pth", map_location=device))
-    model.to(device)
 
     print("Beginning training")
 
@@ -104,4 +102,8 @@ def train(load=False):
 
 
 if __name__ == "__main__":
-    train()
+    answer = input("Train existing[1] or new model[2]?: ")
+    load = False
+    if answer == "1":
+        load = True
+    train(load)

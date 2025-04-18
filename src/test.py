@@ -6,7 +6,7 @@ from utils import deconvolve, CustomImageFolder, CustomAudioImagePairing
 import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI/"
+root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 audio_model = f"{root}models/audioVAE.pth"
 image_model = f"{root}models/vae.pth"
 
@@ -22,14 +22,13 @@ def test_vqvae(input_model):
     model = VQVAE()
     model.to(device)
     model.load_state_dict(torch.load(input_model, map_location=device))
-    
 
     for i, (images, _) in enumerate(dataloader):
         
         images = images.to(device)
         recon_images, _ = model(images)
         for i in range(len(recon_images)):        
-            Image.fromarray((deconvolve(recon_images[i].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}data/test_images/recon_{i}.jpeg")
+            Image.fromarray((deconvolve(recon_images[i].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}/data/outputs/recon_{i}.jpeg")
 
 
 
@@ -69,8 +68,16 @@ def test_audio_vqvae(root, audio_model, image_model):
     
 if __name__ == "__main__":
     
-    print("Testing novel image generation...")
-    test_audio_vqvae(root, "models/audioVAE.pth", "models/vae.pth")
+    audio_model = "models/audioVAE.pth"
+        
     
-    #test_audio_vqvae(root, audio_model, image_model)
+    answer = input("Do you want to test image[1] or audio[2]?: ")
+    if answer == "2":
+        test_audio_vqvae(root, "models/audioVAE.pth", "models/vae.pth")
+    else:
+        answer = input("What is the name of your VAE file?: ")
+        test_vqvae(f"{root}/models/{answer}")
+    
+    
+    
     print("Done")
