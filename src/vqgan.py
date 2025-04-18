@@ -115,12 +115,29 @@ def train(model_name, load=False, image_size=256):
 
 
 if __name__ == "__main__":
-    answer = input("Train existing[1] or new model[2]?: ")
-    load = False
-    if answer == "1":
-        load = True
-        
-    name = input("Please enter the name of your model: ")
-    if name.split(".")[-1] != "pth":
-        name = name + ".pth"        
-    train(load)
+    while True:
+        answer = input("Train existing [1] or new model [2]? ").strip()
+        if answer in ["1", "2"]:
+            load = answer == "1"
+            break
+        print("Invalid input. Please enter 1 or 2.")
+
+    while True:
+        name = input("Please enter the name of your model: ").strip()
+        if name:
+            if not name.endswith(".pth"):
+                name += ".pth"
+            break
+        print("Model name cannot be empty.")
+    
+    while True:
+        try:
+            size = int(input("Please enter the size of your images (max 256): ").strip())
+            if 0 < size <= 256:
+                break
+            else:
+                print("Size must be a positive number no greater than 256.")
+        except ValueError:
+            print("Invalid input. Please enter a whole number.")
+
+    train(name, load=load, image_size=size)
