@@ -45,14 +45,14 @@ class PerceptualLoss(nn.Module):
         return F.l1_loss(x_vgg, y_vgg)
     
     
-def train(load=False):
+def train(model_name, load=False, image_size=256):
     
     print("Beginning Loading VQGAN")
     vqvae = VQVAE()
     D = Discriminator()
     
     if(load):
-        vqvae.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
+        vqvae.load_state_dict(torch.load(f"{root}/models/{model_name}", map_location=device))
         for param in vqvae.parameters():
             param.requires_grad = False
     
@@ -65,14 +65,14 @@ def train(load=False):
     gan_optimiser = torch.optim.Adam(D.parameters(), lr=learning_rate)
     mse_loss = torch.nn.MSELoss()
 
-    dataset = CustomImageFolder(f"{root}/data/downloaded_images")
+    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     print("Beginning training")
 
     for epoch in range(epochs):
         
-        if epoch == freeze_epochs:
+        if load and epoch == freeze_epochs:
             print(f"Unfreezing VQ-VAE at epoch {epoch}")
             for param in vqvae.parameters():
                 param.requires_grad = True
@@ -111,7 +111,7 @@ def train(load=False):
             total_loss.backward()
             optimiser.step()
         
-        torch.save({'vqgan': vqvae.state_dict(), 'discriminator': D.state_dict()}, f'{root}/models/vqgan_network.pth')
+        torch.save({'vqgan': vqvae.state_dict(), 'discriminator': D.state_dict()}, f'{root}/models/{model_name}')
 
 
 if __name__ == "__main__":

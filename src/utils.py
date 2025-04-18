@@ -129,12 +129,12 @@ class CustomAudioImagePairing(Dataset):
 
 # CHATGPT ASSISTED
 class CustomImageFolder(Dataset):
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, image_size):
         self.root_dir = root_dir
         self.image_files = []
         
         self.transform =  transforms.Compose([
-            transforms.Resize((256, 256)),
+            transforms.Resize((image_size, image_size)),
             transforms.ToTensor(),
             transforms.Normalize((0.5,0.5, 0.5), (0.5,0.5,0.5))
         ])
