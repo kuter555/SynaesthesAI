@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torchvision.models import vgg16
 from tqdm import tqdm
 
+from train_vqvae import train_vae
 from vqvae import VQVAE
 from utils import print_progress_bar, CustomImageFolder, deconvolve
     
@@ -52,7 +53,7 @@ def train(model_name, load=False, image_size=256):
     D = Discriminator()
     
     if(load):
-        vqvae.load_state_dict(torch.load(f"{root}/models/{model_name}", map_location=device))
+        vqvae.load_state_dict(torch.load(f"{root}/models/pae_{model_name}", map_location=device))
         for param in vqvae.parameters():
             param.requires_grad = False
     
@@ -111,8 +112,24 @@ def train(model_name, load=False, image_size=256):
             total_loss.backward()
             optimiser.step()
         
-        torch.save({'vqgan': vqvae.state_dict(), 'discriminator': D.state_dict()}, f'{root}/models/{model_name}')
-
+        # save model
+        try:
+            torch.save({'vqgan': vqvae.state_dict(), 'discriminator': D.state_dict()}, f'{root}/models/{model_name}')
+        except:
+            print(f"\nFailed to save at epoch: {epoch}")
+            
+        # incremental "backup" save in case anything else fails
+        if epoch % 25 == 0:
+            try:
+                torch.save({'vqgan': vqvae.state_dict(), 'discriminator': D.state_dict()}, f'{root}/models/BACKUP_{epoch}_{model_name}')
+            except:
+                print(f"\nFailed to save backup: {epoch}")
+            
+        
+        torch.cuda.empty_cache()
+    
+            
+            
 
 if __name__ == "__main__":
     while True:
@@ -140,4 +157,7 @@ if __name__ == "__main__":
         except ValueError:
             print("Invalid input. Please enter a whole number.")
 
+
+    print("Training VQ-VAE\n")
+    train_vae(name, load=False, image_size=size)
     train(name, load=load, image_size=size)
