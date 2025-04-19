@@ -7,7 +7,7 @@ from utils import print_progress_bar, CustomImageFolder, deconvolve
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = ".."
-epochs = 3
+epochs = 250
     
 def train_vae(model_name, load=False, image_size=256):
     
