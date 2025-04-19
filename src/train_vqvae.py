@@ -2,8 +2,8 @@ import torch
 from torch import optim
 from PIL import Image
 import numpy as np
-from src.vqvae import VQVAE
-from src.utils import print_progress_bar, CustomImageFolder, deconvolve
+from vqvae import VQVAE
+from utils import print_progress_bar, CustomImageFolder, deconvolve
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = ".."
