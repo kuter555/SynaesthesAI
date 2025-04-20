@@ -216,7 +216,7 @@ if __name__ == "__main__":
     if answer == "1":
         file = input("What is the name of your model?: ")
         path = input("What is the desired output path?: ")
-        extract_latent_codes(file, path)
+        extract_latent_codes(f"{root}/models/{file}", path)
     
     elif answer == "3":
         decode()
