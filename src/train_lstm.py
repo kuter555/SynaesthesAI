@@ -94,7 +94,7 @@ def train_lstm(num_epochs=100, load_top=False):
             print("\nFailed to save LSTM")
 
 
-def extract_latent_codes():
+def extract_latent_codes(model_path, output_path):
     
     print("Beginning Extraction")
     
@@ -103,7 +103,14 @@ def extract_latent_codes():
     
     model = VQVAE()
     print("Loading Model Dict")
-    model.load_state_dict(torch.load(f"{root}/models/vqgan-128.pth", map_location=device))
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    except:
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            model.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load model: {e}. Exiting...")
     model.to(device)
     
     print("Starting image processing")
@@ -125,8 +132,8 @@ def extract_latent_codes():
     stored_latent_b = torch.cat(stored_latent_b, dim=0)
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
         
-    torch.save(stored_latent_t, f"{root}/models/t_latents.pt")
-    torch.save(stored_latent_b, f"{root}/models/b_latents.pt")
+    torch.save(stored_latent_t, f"{root}/{output_path}/t_latents.pt")
+    torch.save(stored_latent_b, f"{root}/{output_path}/b_latents.pt")
             
     print("Latents successfully saved!")
     
@@ -207,7 +214,9 @@ if __name__ == "__main__":
     
     answer = input("Would you like to Extract Latents (1) or Train the LSTM (2), or Decode (3)? > ")
     if answer == "1":
-        extract_latent_codes()
+        file = input("What is the name of your model?: ")
+        path = input("What is the desired output path?: ")
+        extract_latent_codes(file, path)
     
     elif answer == "3":
         decode()
