@@ -15,7 +15,6 @@ def train_gpt(num_epochs=100):
     
     root = ".."
     
-    
     print("Pre training")
     torch.cuda.empty_cache()
     vqvae = VQVAE()    

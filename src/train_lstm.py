@@ -8,11 +8,11 @@ from utils import CustomImageFolder, print_progress_bar, deconvolve, LatentDatas
 from vqvae import VQVAE, LatentLSTM, InheritedLatentLSTM
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
+#root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
+
+root = ".."
 
 def train_lstm(num_epochs=100, load_top=False):
-
-    root = ".."
 
     torch.cuda.empty_cache()
     model = VQVAE()
@@ -93,16 +93,17 @@ def train_lstm(num_epochs=100, load_top=False):
         except:
             print("\nFailed to save LSTM")
 
+
 def extract_latent_codes():
     
     print("Beginning Extraction")
     
-    dataset = CustomImageFolder("../data/downloaded_images")
+    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=128)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE()
     print("Loading Model Dict")
-    model.load_state_dict(torch.load("../models/vae.pth", map_location=device))
+    model.load_state_dict(torch.load(f"{root}/models/vqgan-128.pth", map_location=device))
     model.to(device)
     
     print("Starting image processing")
@@ -124,10 +125,11 @@ def extract_latent_codes():
     stored_latent_b = torch.cat(stored_latent_b, dim=0)
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
         
-    torch.save(stored_latent_t, "../models/renewed_top_latents.pt")
-    torch.save(stored_latent_b, "../models/renewed_bottom_latents_1.pt")
+    torch.save(stored_latent_t, f"{root}/models/t_latents.pt")
+    torch.save(stored_latent_b, f"{root}/models/b_latents.pt")
             
     print("Latents successfully saved!")
+    
     
 def decode():
     
