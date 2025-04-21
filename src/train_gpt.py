@@ -67,7 +67,7 @@ def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
             t_optimiser.step()
             t_optimiser.zero_grad()
         try:
-            torch.save(t_model.state_dict(), f"{root}/models/t_gpt.pth")
+            torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt.pth")
         except Exception as e:
             print(f"Couldn't save top GPT: {e}")
     
@@ -95,9 +95,9 @@ def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
         
         
         try:
-            torch.save(b_model.state_dict(), f"{root}/models/b_gpt.pth")
-        except:
-            print("Couldn't save bottom lstm?")
+            torch.save(b_model.state_dict(), f"{root}/models/{model.split(".")[0]}_b_gpt.pth")
+        except Exception as e:
+            print(f"Couldn't save bottom lstm: {e}")
 
 
 if __name__ == "__main__":
