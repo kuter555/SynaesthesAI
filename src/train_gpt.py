@@ -11,25 +11,28 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 
 
-def train_gpt(num_epochs=100):
+def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
     
     root = ".."
-    
     print("Pre training")
     torch.cuda.empty_cache()
     vqvae = VQVAE()    
     try:
-        vqvae.load_state_dict(torch.load(f"{root}/models/vqgan-128.pth", map_location=device))
+        t_latents = torch.load(f"{root}/models/{top_latents}").to(device)
+        b_latents = torch.load(f"{root}/models/{bottom_latents}").to(device)
+        vqvae.load_state_dict(torch.load(f"{root}/models/{model}", map_location=device))
         vqvae.to(device)
-        top_latents = torch.load(f"{root}/models/t_latents.pt").to(device)
-        bottom_latents_1 = torch.load(f"{root}/models/b_latents.pt").to(device)
     except Exception as e:
-        print(f"Failed to run: {e} Exiting...")
-        return -1
+        try:
+            checkpoint = torch.load(f"{root}/models/vqgan-128.pth", map_location=device)
+            vqvae.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load model: {e}. Exiting...")
+        
     
     print("Loaded latents")
-    top_sequence = top_latents.view(top_latents.size(0), -1)
-    bottom_sequence = bottom_latents_1.view(bottom_latents_1.size(0), -1)
+    top_sequence = t_latents.view(t_latents.size(0), -1)
+    bottom_sequence = b_latents.view(b_latents.size(0), -1)
     
     t_dataset = LatentDataset(top_sequence)
     b_dataset = HierarchicalLatentDataset(top_sequence, bottom_sequence)   
@@ -98,4 +101,9 @@ def train_gpt(num_epochs=100):
 
 
 if __name__ == "__main__":
-    train_gpt()
+    
+    top_latents = input("What is the name of your top latents?: ")
+    bottom_latents = input("What is the name of your bottom latents?: ")
+    model = input("What is the name of your model?: ")
+    
+    train_gpt(model, top_latents, bottom_latents)
