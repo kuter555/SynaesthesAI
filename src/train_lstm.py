@@ -94,7 +94,7 @@ def train_lstm(num_epochs=100, load_top=False):
             print("\nFailed to save LSTM")
 
 
-def extract_latent_codes(model_path, output_path):
+def extract_latent_codes(model_path, t_latent_name, b_latent_name, output_path):
     
     print("Beginning Extraction")
     
@@ -132,8 +132,8 @@ def extract_latent_codes(model_path, output_path):
     stored_latent_b = torch.cat(stored_latent_b, dim=0)
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
         
-    torch.save(stored_latent_t, f"{root}/{output_path}/t_latents.pt")
-    torch.save(stored_latent_b, f"{root}/{output_path}/b_latents.pt")
+    torch.save(stored_latent_t, f"{root}/{output_path}/{t_latent_name}")
+    torch.save(stored_latent_b, f"{root}/{output_path}/{b_latent_name}")
             
     print("Latents successfully saved!")
     
@@ -216,7 +216,9 @@ if __name__ == "__main__":
     if answer == "1":
         file = input("What is the name of your model?: ")
         path = input("What is the desired output path?: ")
-        extract_latent_codes(f"{root}/models/{file}", path)
+        b_name = input("What is the desired b_latent name: ")
+        t_name = input("What is the desired t_latent_name: ")
+        extract_latent_codes(f"{root}/models/{file}", t_name, b_name, path)
     
     elif answer == "3":
         decode()

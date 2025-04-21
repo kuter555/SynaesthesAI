@@ -6,12 +6,15 @@ from torch.utils.data import DataLoader
 from PIL import Image
 from utils import print_progress_bar, HierarchicalLatentDataset, LatentDataset
 from vqvae import VQVAE, LatentGPT, BottomGPT
+from train_lstm import extract_latent_codes
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 
 
 def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
+    
+    extract_latent_codes(model, top_latents, bottom_latents, "models")
     
     root = ".."
     print("Pre training")
