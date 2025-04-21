@@ -19,10 +19,10 @@ def train_gpt(num_epochs=100):
     torch.cuda.empty_cache()
     vqvae = VQVAE()    
     try:
-        vqvae.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
+        vqvae.load_state_dict(torch.load(f"{root}/models/vqgan-128.pth", map_location=device))
         vqvae.to(device)
-        top_latents = torch.load(f"{root}/models/renewed_top_latents.pt").to(device)
-        bottom_latents_1 = torch.load(f"{root}/models/renewed_bottom_latents_1.pt").to(device)   
+        top_latents = torch.load(f"{root}/models/t_latents.pt").to(device)
+        bottom_latents_1 = torch.load(f"{root}/models/b_latents.pt").to(device)
     except Exception as e:
         print(f"Failed to run: {e} Exiting...")
         return -1
@@ -44,34 +44,37 @@ def train_gpt(num_epochs=100):
     
     print("Established optimsers and datasets")
     
+    print("Training top GPT...")
     for epoch in range(num_epochs):
-        
-        print_progress_bar("Top GPT", epoch, num_epochs)
-        for input_ids, target_ids in t_dataloader:
-            input_ids = input_ids.to(device)       # shape: (batch, 1023)
-            target_ids = target_ids.to(device)     # shape: (batch, 1023)
+        for i, (input_ids, target_ids) in enumerate(t_dataloader):
+            
+            print_progress_bar(epoch, i, len(b_dataloader))
+            
+            input_ids = input_ids.to(device)       
+            target_ids = target_ids.to(device)     
 
-            logits = t_model(input_ids)              # shape: (batch, 1023, vocab_size)
+            logits = t_model(input_ids)            
 
             loss = F.cross_entropy(
-                logits.view(-1, logits.size(-1)),  # flatten logits
+                logits.view(-1, logits.size(-1)),
                 target_ids.view(-1)
             )
 
             loss.backward()
             t_optimiser.step()
             t_optimiser.zero_grad()
-    
-        
         try:
             torch.save(t_model.state_dict(), f"{root}/models/t_gpt.pth")
-        except:
-            print("Couldn't save top lstm?")
+        except Exception as e:
+            print(f"Couldn't save top GPT: {e}")
     
+    
+    print("Training bottom GPT...")
     for epoch in range(num_epochs):
-        
-        print_progress_bar("Bottom GPT", epoch, num_epochs)
-        for input_ids, target_ids in b_dataloader:
+        for i, (input_ids, target_ids) in enumerate(b_dataloader):
+            
+            print_progress_bar(epoch, i, len(b_dataloader))
+            
             input_ids = input_ids.to(device)       # (batch, 5120)
             target_ids = target_ids.to(device)     # (batch, 5120)
 
