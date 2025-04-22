@@ -68,16 +68,20 @@ def train_gpt(model, top_latents, bottom_latents, train_top=True, num_epochs=100
                 loss.backward()
                 t_optimiser.step()
                 t_optimiser.zero_grad()
+            
             try:
                 torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt.pth")
             except Exception as e:
                 print(f"Couldn't save top GPT: {e}")
-            
+                
             if epoch % 25 == 0:
                 try:
                     torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt_{epoch}.pth")
                 except Exception as e:
                     print(f"Couldn't save top GPT backup: {e}")
+        
+            torch.cuda.empty_cache()
+            
                 
     else:
         t_model.load_state_dict(torch.load(f"{root}/models/{model.split(".")[0]}_t_gpt.pth", map_location=device))
@@ -109,6 +113,14 @@ def train_gpt(model, top_latents, bottom_latents, train_top=True, num_epochs=100
             torch.save(b_model.state_dict(), f"{root}/models/{model.split(".")[0]}_b_gpt.pth")
         except Exception as e:
             print(f"Couldn't save bottom lstm: {e}")
+            
+        if epoch % 25 == 0:
+            try:
+                torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt_{epoch}.pth")
+            except Exception as e:
+                print(f"Couldn't save top GPT backup: {e}")
+        
+        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
