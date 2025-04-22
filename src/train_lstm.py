@@ -94,11 +94,11 @@ def train_lstm(num_epochs=100, load_top=False):
             print("\nFailed to save LSTM")
 
 
-def extract_latent_codes(model_path, t_latent_name, b_latent_name, output_path):
+def extract_latent_codes(model_path, t_latent_name, b_latent_name, image_size, output_path):
     
     print("Beginning Extraction")
     
-    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=128)
+    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE()

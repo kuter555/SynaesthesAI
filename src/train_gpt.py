@@ -131,10 +131,11 @@ if __name__ == "__main__":
     
     generate = input("Do you need to generate new latents? (y/n): ")
     if generate.lower() == "y":
-        extract_latent_codes(model, top_latents, bottom_latents, "models")
+        number = input("What size are your images?: ")
+        extract_latent_codes(model, top_latents, bottom_latents, int(number), "models")
     
     
-    load_t = input("Do you need to load a pretrained top GPT? (y/n): ")
+    load_t = input("Do you need to train a new top GPT? (y/n): ")
     if generate.lower() == "y":
         load = True
     else:
