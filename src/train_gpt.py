@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 
 
-def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
+def train_gpt(model, top_latents, bottom_latents, train_top=True, num_epochs=100):
     
     root = ".."
     print("Pre training")
@@ -48,30 +48,40 @@ def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
     
     print("Established optimsers and datasets")
     
-    print("Training top GPT...")
-    for epoch in range(num_epochs):
-        for i, (input_ids, target_ids) in enumerate(t_dataloader):
+    if train_top:
+        print("Training top GPT...")
+        for epoch in range(num_epochs):
+            for i, (input_ids, target_ids) in enumerate(t_dataloader):
+
+                print_progress_bar(epoch, i, len(b_dataloader))
+
+                input_ids = input_ids.to(device)       
+                target_ids = target_ids.to(device)     
+
+                logits = t_model(input_ids)            
+
+                loss = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)),
+                    target_ids.view(-1)
+                )
+
+                loss.backward()
+                t_optimiser.step()
+                t_optimiser.zero_grad()
+            try:
+                torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt.pth")
+            except Exception as e:
+                print(f"Couldn't save top GPT: {e}")
             
-            print_progress_bar(epoch, i, len(b_dataloader))
-            
-            input_ids = input_ids.to(device)       
-            target_ids = target_ids.to(device)     
-
-            logits = t_model(input_ids)            
-
-            loss = F.cross_entropy(
-                logits.view(-1, logits.size(-1)),
-                target_ids.view(-1)
-            )
-
-            loss.backward()
-            t_optimiser.step()
-            t_optimiser.zero_grad()
-        try:
-            torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt.pth")
-        except Exception as e:
-            print(f"Couldn't save top GPT: {e}")
-    
+            if epoch % 25 == 0:
+                try:
+                    torch.save(t_model.state_dict(), f"{root}/models/{model.split(".")[0]}_t_gpt_{epoch}.pth")
+                except Exception as e:
+                    print(f"Couldn't save top GPT backup: {e}")
+                
+    else:
+        t_model.load_state_dict(torch.load(f"{root}/models/{model.split(".")[0]}_t_gpt.pth", map_location=device))
+        t_model.to(device)
     
     print("Training bottom GPT...")
     for epoch in range(num_epochs):
@@ -111,4 +121,11 @@ if __name__ == "__main__":
     if generate.lower() == "y":
         extract_latent_codes(model, top_latents, bottom_latents, "models")
     
-    train_gpt(model, top_latents, bottom_latents)
+    
+    load_t = input("Do you need to load a pretrained top GPT? (y/n): ")
+    if generate.lower() == "y":
+        load = True
+    else:
+        load = False
+        
+    train_gpt(model, top_latents, bottom_latents, load)
