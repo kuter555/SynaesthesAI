@@ -14,8 +14,6 @@ root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Projec
 
 def train_gpt(model, top_latents, bottom_latents, num_epochs=100):
     
-    extract_latent_codes(model, top_latents, bottom_latents, "models")
-    
     root = ".."
     print("Pre training")
     torch.cuda.empty_cache()
@@ -108,5 +106,9 @@ if __name__ == "__main__":
     top_latents = input("What is the name of your top latents?: ")
     bottom_latents = input("What is the name of your bottom latents?: ")
     model = input("What is the name of your model?: ")
+    
+    generate = input("Do you need to generate new latents? (y/n): ")
+    if generate.lower() == "y":
+        extract_latent_codes(model, top_latents, bottom_latents, "models")
     
     train_gpt(model, top_latents, bottom_latents)
