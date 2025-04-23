@@ -22,7 +22,11 @@ def test_vqvae(input_model, model_type, image_size):
     dataset = CustomImageFolder(f"{root}/data/test_images", image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
 
-    model = model_type()
+    if model_type == VAE:
+        model = model_type(model_image_size=image_size)
+    else:
+        model = model_type()
+    
     try:
         model.load_state_dict(torch.load(model_path, map_location=device))
     except Exception as e:        
@@ -30,15 +34,21 @@ def test_vqvae(input_model, model_type, image_size):
             checkpoint = torch.load(model_path, map_location=device)
             model.load_state_dict(checkpoint["vqgan"])
         except Exception as e:
-            print(f"Unable to load model: {e}. Exiting...")    
+            print(f"Unable to load model: {e}. Exiting...")
             traceback.print_exc()
             return
+    
     
     model.to(device)
     
     for i, (images, _) in enumerate(dataloader):
         images = images.to(device)
-        recon_images, _ = model(images)
+        
+        if model_type==VAE:
+            recon_images, _, _ = model(images)
+        else:    
+            recon_images, _ = model(images)
+            
         for i in range(len(recon_images)):        
             Image.fromarray((deconvolve(recon_images[i].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}/data/outputs/{model_name}.jpeg")
 

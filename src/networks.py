@@ -184,7 +184,6 @@ class AudioInheritedLatentLSTM(nn.Module):
                
         full_input = torch.cat((x, y_resized), dim=-1)  # [32, 4095, 1024]
                 
-                
         # GPT generated
         audio_embed = self.audio_encoder(audio_features)
         audio_embed = audio_embed.view(-1, self.layers, self.hidden_dim, 2)
@@ -280,7 +279,7 @@ class AudioBottomGPT(nn.Module):
 
 
 
-
+# WTF
 class Quantize(nn.Module):
     def __init__(self, dim, n_embed, decay=0.99, eps=1e-5):
         super().__init__()
@@ -427,8 +426,6 @@ class EncoderVAE(nn.Module):
         return x
 
 
-
-# https://www.geeksforgeeks.org/create-model-using-custom-module-in-pytorch/
 class DecoderVAE(nn.Module):
     
     def __init__(self, output_dim=3, latent_dim=64):
@@ -436,7 +433,7 @@ class DecoderVAE(nn.Module):
         
         self.depth = 1024
         self.latent_dim = latent_dim
-        flatten_dim= 8 * 8 * self.depth
+        flatten_dim = 8 * 8 * self.depth
         
         self.tpconv1 = nn.ConvTranspose2d(self.depth, 512, 4, stride=2, padding=1)  # 8 -> 16
         self.tpconv2 = nn.ConvTranspose2d(512, 256, 4, stride=2, padding=1)  # 16 -> 32
@@ -460,31 +457,27 @@ class DecoderVAE(nn.Module):
         return x
 
 class VAE(nn.Module):
-    def __init__(self):
+    def __init__(self, model_image_size=256):
         
         super().__init__()      
         
         self.latent_dim = 256
-        self.flatten_dim = 1024 * 8 * 8
+        self.flatten_dim = 128 * model_image_size
         
         self.encoder = EncoderVAE(latent_dim=self.latent_dim)
         
-        self.mean = None
-        self.logvar = None
+        self.mean = nn.Linear(self.flatten_dim, self.latent_dim)
+        self.logvar = nn.Linear(self.flatten_dim, self.latent_dim)
         
         self.decoder = DecoderVAE(latent_dim=self.latent_dim)
+        self.decoder.fc = nn.Linear(self.latent_dim, self.flatten_dim)
+        
         
     def encode(self, x):
         
         x = self.encoder(x)
         self.encoded_shape = x.shape
-        B, C, H, W = self.encoded_shape
-
-        flatten_dim = C * H * W
-        if self.mean is None or self.logvar is None:
-            self.mean = nn.Linear(flatten_dim, self.latent_dim).to(x.device)
-            self.logvar = nn.Linear(flatten_dim, self.latent_dim).to(x.device)
-            self.decoder.fc = nn.Linear(self.latent_dim, flatten_dim).to(x.device)
+        B, _, _, _ = self.encoded_shape
 
         x = x.view(B, -1)
         mean = self.mean(x)
@@ -524,9 +517,8 @@ class VQVAE(nn.Module):
         # little bit deep a network but hey ho
         self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
         self.pre_codebook =  nn.Conv2d(channels, embedding_dim, kernel_size=1)
-        self.codebook = nn.Embedding(num_embeddings, embedding_dim)
+        self.codebook = Quantize(embedding_dim, num_embeddings)
         self.decoder = Decoder(embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
-        
         
     def encode(self, x):
         x = self.encoder(x)
