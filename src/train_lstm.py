@@ -122,8 +122,8 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
             print(f"Unable to load model: {e}. Exiting...")
     model.to(device)     
 
-    if not exists(join(root, "models", "LSTM", model_name.split(".")[0])):
-        makedirs(join(root, "models", "LSTM", model_name.split(".")[0]))
+    if not exists(join(root, "models", "LSTM", output_path)):
+        makedirs(join(root, "models", "LSTM", output_path))
 
     vocab_size = model.num_embeddings    
     top_sequence = top_latents.view(top_latents.size(0), -1)
@@ -195,6 +195,15 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
 # ALLOWS TRAINING OF VQVAE-2 and VQGAN
 def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs=100, load_top=False):
 
+    output_path = input("What is your desired output path/where are latents stored?: ")
+    answer = input("Do you need to generate latent codes? (y/n): ")
+    if answer == "y":
+        if not exists(join(root, "models", "LSTM", output_path)):
+            makedirs(join(root, "models", "LSTM", output_path))
+        extract_latent_codes(model_name, t_latents, b_latents, size, output_path)
+
+
+
     torch.cuda.empty_cache()
     model = VQVAE2()
     try:
@@ -246,7 +255,7 @@ def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs
 
             torch.cuda.empty_cache()
             try:
-                torch.save(lstm.state_dict(), join(root, "models", "LSTM", model_name.split(".")[0], "t_lstm.pth"))
+                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, "t_lstm.pth"))
             except:
                 print("Couldn't save top LSTM")
             
@@ -268,7 +277,7 @@ def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs
             
         torch.cuda.empty_cache()
         try:
-            torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", model_name.split(".")[0], "b_lstm.pth"))
+            torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", output_path, "b_lstm.pth"))
         except:
             print("\nFailed to save bottom LSTM")
 

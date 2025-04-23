@@ -233,6 +233,54 @@ class BottomGPT(nn.Module):
         return self.model(input_ids).logits
 
 
+
+class AudioLatentGPT(nn.Module):
+    def __init__(self, vocab_size, embedding_dim=512, n_layer=6, n_head=8):
+        super().__init__()
+        config = GPT2Config(
+            vocab_size=vocab_size,
+            n_positions=4096,  # max length you expect (top: 1024, bottom: 4096)
+            n_ctx=4096,
+            n_embd=embedding_dim,
+            n_layer=n_layer,
+            n_head=n_head,
+            use_cache=False,
+        )
+        self.transformer = GPT2LMHeadModel(config)
+
+    def forward(self, audio_tokens, image_tokens):
+        
+        input_ids = torch.cat([audio_tokens, image_tokens[:, :-1]], dim=1)
+        target_ids = torch.cat([torch.full_like(audio_tokens, -100), image_tokens], dim=1)
+
+        outputs = self.transformer(input_ids, labels=target_ids)
+        return outputs.logits, outputs.loss
+    
+
+class AudioBottomGPT(nn.Module):
+    def __init__(self, vocab_size, embedding_dim=512, n_layer=12, n_head=8):
+        super().__init__()
+        config = GPT2Config(
+            vocab_size=vocab_size,
+            n_positions=5120,  # enough room for [top | bottom]
+            n_ctx=5120,
+            n_embd=embedding_dim,
+            n_layer=n_layer,
+            n_head=n_head,
+        )
+        self.model = GPT2LMHeadModel(config)
+
+    def forward(self, audio_tokens, image_tokens):
+        
+        input_ids = torch.cat([audio_tokens, image_tokens[:, :-1]], dim=1)
+        target_ids = torch.cat([torch.full_like(audio_tokens, -100), image_tokens], dim=1)
+
+        outputs = self.transformer(input_ids, labels=target_ids)
+        return outputs.logits, outputs.loss
+
+
+
+
 class Quantize(nn.Module):
     def __init__(self, dim, n_embed, decay=0.99, eps=1e-5):
         super().__init__()
@@ -460,86 +508,47 @@ class VQVAE(nn.Module):
     
     def __init__(self, 
                  input_dim=3,
-                 latent_dim=1024,
-                 embedding_dim=128,
+                 channels=128,
+                 
+                 n_residual_blocks=2,
+                 n_residual_dims=32,
+                 
+                 embedding_dim=64,
                  num_embeddings=512,
+                 
                  beta=0.25):
         super(VQVAE, self).__init__()
         
         self.beta = beta
         
         # little bit deep a network but hey ho
-        self.encoder = nn.Sequential(
-            nn.Conv2d(input_dim, 64, 4, stride=2, padding=1),  # 256 -> 128
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, 4, stride=2, padding=1),  # 128 -> 64
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.Conv2d(128, 256, 4, stride=2, padding=1),  # 64 -> 32
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.Conv2d(256, 512, 4, stride=2, padding=1),  # 32 -> 16
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
-            nn.Conv2d(512, latent_dim, 4, stride=2, padding=1),  # 16 -> 8
-            nn.BatchNorm2d(1024),
-            nn.ReLU()
-        )
-        
-        self.pre_codebook =  nn.Conv2d(latent_dim, embedding_dim, kernel_size=1)
+        self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims)
+        self.pre_codebook =  nn.Conv2d(channels, embedding_dim, kernel_size=1)
         self.codebook = nn.Embedding(num_embeddings, embedding_dim)
-        self.post_codebook = nn.Conv2d(embedding_dim, latent_dim, kernel_size=1)
+        self.decoder = Decoder(embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims)
         
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(latent_dim, 512, 4, stride=2, padding=1),  # 256 -> 128
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
-            nn.ConvTranspose2d(512, 256, 4, stride=2, padding=1),  # 128 -> 64
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),  # 64 -> 32
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),  # 32 -> 16
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.ConvTranspose2d(64, input_dim, 4, stride=2, padding=1),  # 16 -> 8
-            nn.BatchNorm2d(input_dim),
-            nn.Sigmoid()
-        )
         
-    def forward(self, x):
-        
-        ## rewrite when you have the chance
+    def encode(self, x):
         x = self.encoder(x)
-        quant_input = self.pre_codebook(x)
-        
-        B, C, H, W = quant_input.shape
-        quant_input = quant_input.permute(0,2,3,1)
-        quant_input = quant_input.reshape((quant_input.size(0), -1, quant_input.size(-1)))
-        
-        dist = torch.cdist(quant_input, self.codebook.weight[None, :].repeat((quant_input.size(0), 1, 1)))
-        
-        min_encoding_indices = torch.argmin(dist, dim=-1)
-        
-        quant_out = torch.index_select(self.codebook.weight, 0, min_encoding_indices.view(-1))
-        
-        quant_input = quant_input.reshape((-1, quant_input.size(-1)))
-        
-        commitment_loss = torch.mean((quant_out.detach() - quant_input)**2)
-        codebook_loss = torch.mean((quant_out - quant_input.detach()**2))
-        quantize_losses = codebook_loss + self.beta * commitment_loss
-        
-        quant_out = quant_input + (quant_out -  quant_input).detach()
-        
-        quant_out = quant_out.reshape((B, H, W, C)).permute(0,3,1,2)
-        
-        min_encoding_indices = min_encoding_indices.reshape((-1, quant_out.size(-2), quant_out.size(-1)))
-        
-        decoder_input= self.post_codebook(quant_out)
-        output = self.decoder(decoder_input)
-        return output, quantize_losses
+        quant_input = self.pre_codebook(x).permute(0,2,3,1)
+        quant, diffs, ids = self.codebook(quant_input)
+        quant = quant.permute(0, 3, 1, 2)
+        return quant, diffs, ids
+
+    def decode(self, quant):
+        output = self.decoder(quant)
+        return output
+    
+    # For sampling, may not use
+    def decode_code(self, quant):
+        quant = self.codebook.embed_code(quant).permute(0,3,1,2)
+        output = self.decode(quant)
+        return output
+
+    def forward(self, x):
+        quant_out, diff, _, = self.encode(x)
+        output = self.decode(quant_out)
+        return output, diff.mean() * self.beta
 
 
 

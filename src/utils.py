@@ -39,6 +39,29 @@ class HierarchicalLatentDataset(Dataset):
         return input_ids, target_ids
 
 
+class AudioHierarchicalLatentDataset(Dataset):
+    def __init__(self, top_seqs, bottom_seqs, audio):
+        self.top_seqs = top_seqs  # shape: (N, 1024)
+        self.bottom_seqs = bottom_seqs  # shape: (N, 4096)
+        self.audio = audio
+
+    def __len__(self):
+        return len(self.top_seqs)
+
+    def __getitem__(self, idx):
+        top = self.top_seqs[idx]
+        bottom = self.bottom_seqs[idx]
+
+        input_ids = torch.cat([top, bottom], dim=0)
+        target_ids = torch.cat([
+            torch.full_like(top, -100),  # mask top tokens from loss
+            bottom
+        ], dim=0)
+        audio = self.audio[idx]
+        
+        return input_ids, target_ids, audio
+
+
 
 
 
@@ -105,15 +128,17 @@ class InheritedLatentDataset(Dataset):
 
 class CustomAudioImagePairing(Dataset):
     
-    def __init__(self, image_dir, audio_dir, image_size):
+    def __init__(self, image_dir, audio_dir, size):
         self.image_dir = image_dir
         self.audio_dir = audio_dir
         
         self.images = []
         self.audio = []
         
+        self.size = size
+        
         self.transform =  transforms.Compose([
-            transforms.Resize((image_size, image_size)),
+            transforms.Resize((self.size, self.size)),
             transforms.ToTensor(),
             transforms.Normalize((0.5,0.5, 0.5), (0.5,0.5,0.5))
         ])       
@@ -166,7 +191,7 @@ class CustomAudioImagePairing(Dataset):
         elif spectrogram.ndim == 2:
             spectrogram = spectrogram.unsqueeze(0).unsqueeze(0)
             
-        spectrogram = F.interpolate(spectrogram, size=(256, 256), mode='bilinear', align_corners=False)
+        spectrogram = F.interpolate(spectrogram, size=(self.size, self.size), mode='bilinear', align_corners=False)
         spectrogram = spectrogram.repeat(1, 3, 1, 1)
         spectrogram = spectrogram.squeeze(0)
         
@@ -276,6 +301,76 @@ def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_p
     torch.save(stored_audio, os.path.join(head_path, "audio.pt"))
             
     print("Latents successfully saved!")   
+    
+    
+    
+
+    
+def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, b_latent_name, image_size, output_path):
+        
+    print("Beginning Extraction")
+    
+    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", image_size=image_size)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
+    
+    model = VQVAE2()
+    model_path = os.path.join(root, "models", model_path)
+    print("Loading Model Dict")
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    except:
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            model.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load model: {e}. Exiting...")
+    model.to(device)
+    
+    audio_model = VQVAE()
+    audio_model_path = os.path.join(root, "models", audio_model_path)
+    print("Loading Model Dict")
+    try:
+        audio_model.load_state_dict(torch.load(audio_model_path, map_location=device))
+    except:
+        try:
+            checkpoint = torch.load(audio_model_path, map_location=device)
+            audio_model.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load audio model: {e}. Exiting...")
+    audio_model.to(device)
+    
+    print("Starting image processing")
+    
+    with torch.no_grad():
+        model.eval()
+        stored_latent_t = []
+        stored_latent_b = []
+        stored_audio = []
+        for i, (audio, images) in enumerate(dataloader):
+            
+            print_progress_bar("Extracting", i, len(dataloader))
+            
+            images = images.to(device)
+            _, _, _, index_t, index_b = model.encode(images)
+            _, indices, _ = audio_model.encode(audio)
+
+            stored_latent_t.append(index_t.cpu())
+            stored_latent_b.append(index_b.cpu())
+            stored_audio.append(indices.cpu())
+    
+    stored_latent_b = torch.cat(stored_latent_b, dim=0)
+    stored_latent_t = torch.cat(stored_latent_t, dim=0)
+    stored_audio = torch.cat(stored_audio, dim=0)
+        
+    head_path = os.path.join(root, "models", "LSTM", output_path)
+        
+    torch.save(stored_latent_t, os.path.join(head_path, t_latent_name))
+    torch.save(stored_latent_b, os.path.join(head_path, b_latent_name))
+    torch.save(stored_audio, os.path.join(head_path, "audio.pt"))
+            
+    print("Latents successfully saved!")
+    
+    
     
     
     

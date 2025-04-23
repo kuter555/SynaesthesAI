@@ -20,18 +20,19 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
     AudioEncoder = model_type(input_dim=3)
     ImageEncoder = model_type(input_dim=3)
     
-    if load:
+    
+    try:
+        img_model_path = join(root, "models", img_model_name)
+        ImageEncoder.load_state_dict(torch.load(img_model_path, map_location=device))
+    except:
         try:
-            img_model_path = join(root, "models", img_model_name)
-            ImageEncoder.load_state_dict(torch.load(img_model_path, map_location=device))
-        except:
-            try:
-                checkpoint = torch.load(img_model_path, map_location=device)
-                ImageEncoder.load_state_dict(checkpoint["vqgan"])
-            except Exception as e:
-                print(f"Unable to load model: {e}. Exiting...")
-                return -1
-            
+            checkpoint = torch.load(img_model_path, map_location=device)
+            ImageEncoder.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load model: {e}. Exiting...")
+            return -1
+    
+    if load:            
         try:
             audio_model_path = join(root, "models", audio_model_name)
             AudioEncoder.load_state_dict(torch.load(audio_model_path, map_location=device))
@@ -42,6 +43,8 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
             except Exception as e:
                 print(f"Unable to load model: {e}. Exiting...")
                 return -1
+            
+    print("Successfully loaded models")
     
     ImageEncoder.to(device)
     AudioEncoder.to(device)
@@ -49,7 +52,7 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
     image_dir = join(root, "data/downloaded_images")
     audio_dir = join(root, "data/spectrograms")
     
-    dataset = CustomAudioImagePairing(image_dir, audio_dir, image_size=image_size)
+    dataset = CustomAudioImagePairing(image_dir, audio_dir, size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     optimiser = optim.Adam(AudioEncoder.parameters(), lr=1e-3)
@@ -93,13 +96,15 @@ def train_audio_encoder_vae(img_model_name, audio_model_name, image_size, epochs
     AudioEncoder = VAE(input_dim=3)
     ImageEncoder = VAE(input_dim=3)
     
+    try:
+        img_model_path = join(root, "models", img_model_name)
+        ImageEncoder.load_state_dict(torch.load(img_model_path, map_location=device))
+    except Exception as e:
+        print(f"Unable to load model: {e}. Exiting...")
+        return -1
+    
     if load:
-        try:
-            img_model_path = join(root, "models", img_model_name)
-            ImageEncoder.load_state_dict(torch.load(img_model_path, map_location=device))
-        except Exception as e:
-            print(f"Unable to load model: {e}. Exiting...")
-            return -1
+        
         try:
             audio_model_path = join(root, "models", audio_model_name)
             AudioEncoder.load_state_dict(torch.load(audio_model_path, map_location=device))
@@ -204,15 +209,21 @@ if __name__ == "__main__":
         except ValueError:
             print("Invalid input. Please enter a whole number.")
             
+    while True:
+        answer = input("Would you like to load existing audio models? (y/n): ")
+        if answer.strip().lower() in ["y", "n"]:
+            load = answer == "y"
+            break
+        print("Invalid input. Please enter either y or n.")
     
       
     while True:
         model_type = input("What model? VAE [1], or VQVAE2/VQGAN-FT [2]?: ").strip()
         if model_type == "1":
-            
+            train_audio_encoder_vae(image_model, audio_model, size, num_epochs, load=load, beta=0.25)
             break
         elif model_type == "2":
-            train_audio_encoder(image_model, audio_model, size, VQVAE2, num_epochs)
+            train_audio_encoder(image_model, audio_model, size, VQVAE2, num_epochs, load=load)
             break
         else:
-            print("Invalid input. Please enter 1 or 2.")       
+            print("Invalid input. Please enter 1 or 2.")

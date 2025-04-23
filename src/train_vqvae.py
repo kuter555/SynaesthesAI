@@ -69,10 +69,10 @@ def train_vae(model_name, epochs=500, load=False, image_size=256):
     
 
     
-def train_vqvae(model_name, model_type, epochs=500, load=False, image_size=256):
+def train_vqvae(model_name, model_type, data_file="downloaded_images", epochs=500, load=False, image_size=256):
     
     # Load data for training
-    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=image_size)
+    dataset = CustomImageFolder(f"{root}/data/{data_file}", image_size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
     
     # Create and load model
