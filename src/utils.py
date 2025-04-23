@@ -258,12 +258,12 @@ def print_progress_bar(epoch, iteration, total, length=50):
     
     
     
-    
+# WILL ONLY WORK FOR VAE
 def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_path):
     
     print("Beginning Extraction")
     
-    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", image_size=image_size)
+    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VAE()
@@ -305,12 +305,12 @@ def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_p
     
     
 
-    
+# WILL ONLY WORK FOR VQVAE-2
 def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, b_latent_name, image_size, output_path):
         
     print("Beginning Extraction")
     
-    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", image_size=image_size)
+    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE2()
@@ -378,7 +378,7 @@ def extract_audio_latent_codes(model_path, t_latent_name, b_latent_name, image_s
         
     print("Beginning Extraction")
     
-    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", image_size=image_size)
+    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE2()
@@ -429,7 +429,7 @@ def extract_latent_codes(model_path, t_latent_name, b_latent_name, image_size, o
     
     print("Beginning Extraction")
     
-    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=image_size)
+    dataset = CustomImageFolder(f"{root}/data/downloaded_images", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE()

@@ -357,7 +357,7 @@ def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
 if __name__ == "__main__":
     
     while True:
-        model_name = input("Please enter the name of your model: ").strip()
+        model_name = input("Please enter the name of your image model: ").strip()
         if model_name:
             if not model_name.endswith(".pth"):
                 model_name += ".pth"
