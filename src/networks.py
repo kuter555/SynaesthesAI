@@ -522,10 +522,10 @@ class VQVAE(nn.Module):
         self.beta = beta
         
         # little bit deep a network but hey ho
-        self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims)
+        self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
         self.pre_codebook =  nn.Conv2d(channels, embedding_dim, kernel_size=1)
         self.codebook = nn.Embedding(num_embeddings, embedding_dim)
-        self.decoder = Decoder(embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims)
+        self.decoder = Decoder(embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
         
         
     def encode(self, x):
