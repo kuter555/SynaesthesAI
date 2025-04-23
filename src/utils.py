@@ -11,7 +11,7 @@ import os
 import sys
 from dotenv import load_dotenv
 
-from networks import VQVAE, VQVAE2
+from networks import VAE, VQVAE, VQVAE2
 
 load_dotenv()
 root = os.getenv('root')
@@ -232,10 +232,55 @@ def print_progress_bar(epoch, iteration, total, length=50):
     
     
     
+    
+    
+def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_path):
+    
+    print("Beginning Extraction")
+    
+    dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", image_size=image_size)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
+    
+    model = VAE()
+    model_path = os.path.join(root, "models", model_path)
+    print("Loading Model Dict")
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    except Exception as e:
+        print(f"Unable to load model: {e}. Exiting...")
+    model.to(device)
+    
+    print("Starting image processing")
+    
+    with torch.no_grad():
+        model.eval()
+        stored_latents = []
+        stored_audio = []
+        for i, (audio, images) in enumerate(dataloader):
+            print_progress_bar("Extracting", i, len(dataloader))
+            
+            images = images.to(device)
+            
+            mean, var = model.encode(images)
+            z = model.reparameterization(mean, var)
+            
+            stored_latents.append(z.cpu())
+            stored_audio.append(audio.cpu())
+    
+    stored_latents = torch.cat(stored_latents, dim=0)
+    stored_audio = torch.cat(stored_audio, dim=0)
+        
+    head_path = os.path.join(root, "models", "LSTM", output_path)
+        
+    torch.save(stored_latents, os.path.join(head_path, latent_name))
+    torch.save(stored_audio, os.path.join(head_path, "audio.pt"))
+            
+    print("Latents successfully saved!")   
+    
+    
+    
 def extract_audio_latent_codes(model_path, t_latent_name, b_latent_name, image_size, output_path):
-    
-    audio_name = model_path.split(".")[0] + "_audio.pth"
-    
+        
     print("Beginning Extraction")
     
     dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", image_size=image_size)
@@ -274,13 +319,13 @@ def extract_audio_latent_codes(model_path, t_latent_name, b_latent_name, image_s
     
     stored_latent_b = torch.cat(stored_latent_b, dim=0)
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
-    stored_latent_t = torch.cat(stored_latent_t, dim=0)
+    stored_audio = torch.cat(stored_audio, dim=0)
         
     head_path = os.path.join(root, "models", "LSTM", output_path)
         
     torch.save(stored_latent_t, os.path.join(head_path, t_latent_name))
     torch.save(stored_latent_b, os.path.join(head_path, b_latent_name))
-    torch.save(stored_audio, os.path.join(head_path, audio_name))
+    torch.save(stored_audio, os.path.join(head_path, "audio.pt"))
             
     print("Latents successfully saved!")
     

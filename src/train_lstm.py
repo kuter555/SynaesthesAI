@@ -6,8 +6,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
 
-from utils import print_progress_bar, deconvolve, AudioLatentDataset, AudioInheritedLatentDataset, LatentDataset, InheritedLatentDataset, extract_latent_codes, extract_audio_latent_codes
-from networks import VQVAE, VQVAE2, LatentLSTM, InheritedLatentLSTM, AudioLatentLSTM, AudioInheritedLatentLSTM
+from utils import print_progress_bar, deconvolve, AudioLatentDataset, AudioInheritedLatentDataset, LatentDataset, InheritedLatentDataset, extract_latent_codes, extract_audio_latent_codes, extract_audio_latent_codes_vae
+from networks import VAE, VQVAE, VQVAE2, LatentLSTM, InheritedLatentLSTM, AudioLatentLSTM, AudioInheritedLatentLSTM
 
 from dotenv import load_dotenv
 from os import getenv, makedirs 
@@ -19,42 +19,109 @@ root = getenv('root')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# Train LSTM with loss against audio
+# trains a LSTM on VAE
+def train_audio_lstm_vae(model_name, latents, size, num_epochs=100):
+    
+    output_path = input("What is your desired output path/where are latents stored?: ")
+    answer = input("Do you need to generate latent codes? (y/n): ")
+    if answer == "y":
+        if not exists(join(root, "models", "LSTM", output_path)):
+            makedirs(join(root, "models", "LSTM", output_path))    
+        extract_audio_latent_codes_vae(model_name, t_latents, b_latents, size, output_path)
 
-# need to input the mel-spectrograms of the audio
+    torch.cuda.empty_cache()
+    model = VAE()
+    try:
+        path = join(root, "models/LSTM", output_path, latents)
+        latents = torch.load(path).to(device)
+        audio_path = join(root, "models/LSTM", output_path, "audio.pt")
+        audio_info = torch.load(audio_path).to(device)
+        
+    except Exception as e:
+        print(f"Failed to load latents: {e} Exiting...")
+        return -1
+    
+    try:
+        model_path = join(root, "models", model_name)
+        model.load_state_dict(torch.load(model_path, map_location=device))   
+    except Exception as e:
+        print(f"Unable to load model: {e}. Exiting...")
+    model.to(device)     
+
+    if not exists(join(root, "models", "LSTM", model_name.split(".")[0])):
+        makedirs(join(root, "models", "LSTM", model_name.split(".")[0]))
+
+    vocab_size = model.num_embeddings    
+    sequence = latents.view(latents.size(0), -1)
+    
+    dataset = AudioLatentDataset(sequence, audio_info)  
+    
+    lstm = AudioLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=audio_info.shape[1], audio_embed_dim=512).to(device)
+    
+    criterion = nn.CrossEntropyLoss()
+    optimiser = optim.Adam(lstm.parameters(), lr=1e-3)
+    
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    
+    for epoch in range(num_epochs):
+        for i, (inputs, target, audio) in enumerate(dataloader):
+            print_progress_bar(epoch, i, len(dataloader))
+            
+            # Get items
+            inputs, target, audio = inputs.to(device).long(), target.to(device).long(), audio.to(device)
+
+            # Train LSTM
+            optimiser.zero_grad()
+            outputs, _ = lstm(inputs, audio)
+            loss = criterion(outputs.view(-1, vocab_size), target.view(-1))
+            loss.backward()
+            optimiser.step()
+            
+        torch.cuda.empty_cache()
+        try:
+            torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, "lstm.pth"))
+        except:
+            print("Couldn't save LSTM")
+            
+
 
 
 # ALLOWS TRAINING OF VQVAE-2 and VQGAN
 def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_epochs=100, load_top=False):
 
+    
+    output_path = input("What is your desired output path/where are latents stored?: ")
     answer = input("Do you need to generate latent codes? (y/n): ")
     if answer == "y":
-        
-        output_path = input("What is your desired output path?: ")
         if not exists(join(root, "models", "LSTM", output_path)):
             makedirs(join(root, "models", "LSTM", output_path))
-        
         extract_audio_latent_codes(model_name, t_latents, b_latents, size, output_path)
 
     torch.cuda.empty_cache()
     model = VQVAE2()
     try:
-        model_path = join(root, "models", model_name)
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.to(device)
-        
         t_path = join(root, "models/LSTM", output_path, t_latents)
         b_path = join(root, "models/LSTM", output_path, b_latents)
         top_latents = torch.load(t_path).to(device)
         bottom_latents = torch.load(b_path).to(device)
         
-        audio_path = join(root, "models", output_path, model_name.split(".")[0] + "_audio.pth")
+        audio_path = join(root, "models/LSTM", output_path, "audio.pt")
         audio_info = torch.load(audio_path).to(device)
-
     except Exception as e:
-        print(f"Failed to run: {e} Exiting...")
+        print(f"Failed to load latents: {e} Exiting...")
         return -1
     
+    try:
+        model_path = join(root, "models", model_name)
+        model.load_state_dict(torch.load(model_path, map_location=device))   
+    except Exception as e:
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            model.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load model: {e}. Exiting...")
+    model.to(device)     
+
     if not exists(join(root, "models", "LSTM", model_name.split(".")[0])):
         makedirs(join(root, "models", "LSTM", model_name.split(".")[0]))
 
@@ -80,7 +147,7 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
                 print_progress_bar(epoch, i, len(t_dataloader))
 
                 # Get items
-                inputs, target, audio = inputs.to(device).long(), target.to(device).long(), audio.to(device).long()
+                inputs, target, audio = inputs.to(device).long(), target.to(device).long(), audio.to(device)
 
                 # Train LSTM
                 optimiser.zero_grad()
@@ -91,7 +158,7 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
 
             torch.cuda.empty_cache()
             try:
-                torch.save(lstm.state_dict(), join(root, "models", "LSTM", model_name.split(".")[0], "t_lstm.pth"))
+                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, "t_lstm.pth"))
             except:
                 print("Couldn't save top LSTM")
             
@@ -115,7 +182,7 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
             
         torch.cuda.empty_cache()
         try:
-            torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", model_name.split(".")[0], "b_lstm.pth"))
+            torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", output_path, "b_lstm.pth"))
         except:
             print("\nFailed to save bottom LSTM")
 
@@ -291,7 +358,7 @@ if __name__ == "__main__":
     while True:
         t_latents = input("What is the name of your top latents?: ").strip()
         if t_latents:
-            if not t_latents.endswith(".pth"):
+            if not t_latents.endswith(".pt"):
                 t_latents += ".pt"
             break
         print("Top latents cannot be empty.")
@@ -299,7 +366,7 @@ if __name__ == "__main__":
     while True:
         b_latents = input("What is the name of your bottom latents?: ").strip()
         if b_latents:
-            if not b_latents.endswith(".pth"):
+            if not b_latents.endswith(".pt"):
                 b_latents += ".pt"
             break
         print("Bottom latents cannot be empty.")
@@ -345,9 +412,11 @@ if __name__ == "__main__":
             while True:
                 model_type = input("What model? VAE [1], or VQVAE2/VQGAN-FT [2], or non-audio [3]?: ").strip()
                 if model_type == "1":
+                    train_audio_lstm_vae(model_name, t_latents, size, num_epochs)
                     break
                 elif model_type == "2":
                     train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_epochs, Load)
+                    break
                 elif model_type == "3":
                     train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs, Load)
                     break

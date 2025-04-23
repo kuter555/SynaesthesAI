@@ -130,12 +130,14 @@ class AudioLatentLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, vocab_dim)
         
         self.audio_encoder = nn.Sequential(
-            nn.Linear(audio_dim, audio_embed_dim),
+            nn.Linear(3 * 256 * 256, audio_embed_dim),
             nn.ReLU(),
             nn.Linear(audio_embed_dim, layers * hidden_dim * 2)
         )
         
     def forward(self, x, audio_features): 
+        
+        audio_features = audio_features.view(audio_features.size(0), -1)
         x = self.embedding(x)
         
         # GPT generated
@@ -163,13 +165,14 @@ class AudioInheritedLatentLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, vocab_dim)
         
         self.audio_encoder = nn.Sequential(
-            nn.Linear(audio_dim, audio_embed_dim),
+            nn.Linear(3 * 256 * 256, audio_embed_dim),
             nn.ReLU(),
             nn.Linear(audio_embed_dim, layers * hidden_dim * 2)
         )
         
     def forward(self, x, y, audio_features):
         
+        audio_features = audio_features.view(audio_features.size(0), -1)
         x = self.embedding(x)
         y = self.embedding(y)
         repeat_factor = x.size(1) // y.size(1) + 1  # Ensures it's long enough
@@ -228,54 +231,6 @@ class BottomGPT(nn.Module):
 
     def forward(self, input_ids):
         return self.model(input_ids).logits
-
-
-class TransformerBlock(nn.Module):
-    def __init__(self, dim, heads):
-        super().__init__()
-        self.attn = nn.MultiheadAttention(embed_dim=dim, num_heads=heads, batch_first=True)
-        self.norm1 = nn.LayerNorm(dim)
-        self.ff = nn.Sequential(
-            nn.Linear(dim, dim * 4),
-            nn.GELU(),
-            nn.Linear(dim * 4, dim)
-        )
-        self.norm2 = nn.LayerNorm(dim)
-
-    def forward(self, x, mask):
-        # Self-attention with causal mask
-        x2, _ = self.attn(self.norm1(x), self.norm1(x), self.norm1(x), attn_mask=mask)
-        x = x + x2
-        x = x + self.ff(self.norm2(x))
-        return x
-
-
-def generate_causal_mask(size):
-    return torch.triu(torch.ones(size, size) * float('-inf'), diagonal=1)
-
-
-class TinyGPT(nn.Module):
-    def __init__(self, vocab_size, seq_len, dim=512, depth=6, heads=8):
-        super().__init__()
-        self.token_embed = nn.Embedding(vocab_size, dim)
-        self.pos_embed = nn.Parameter(torch.randn(1, seq_len, dim))
-        self.blocks = nn.ModuleList([
-            TransformerBlock(dim, heads) for _ in range(depth)
-        ])
-        self.norm = nn.LayerNorm(dim)
-        self.output_proj = nn.Linear(dim, vocab_size)
-
-    def forward(self, x):
-        B, T = x.shape
-        x = self.token_embed(x) + self.pos_embed[:, :T]
-        mask = generate_causal_mask(T).to(x.device)
-
-        for block in self.blocks:
-            x = block(x, mask)
-
-        x = self.norm(x)
-        logits = self.output_proj(x)
-        return logits
 
 
 class Quantize(nn.Module):
