@@ -25,6 +25,7 @@ def test_vqvae(input_model, image_size):
         model.load_state_dict(torch.load(model_path, map_location=device))
     except:
         try:
+            print("VQGAN Implementation...")
             checkpoint = torch.load(model_path, map_location=device)
             model.load_state_dict(checkpoint["vqgan"])
         except Exception as e:

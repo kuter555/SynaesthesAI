@@ -1,40 +1,100 @@
 import torch
 from torch import optim
-from PIL import Image
-import numpy as np
-from vqvae import VQVAE
+import torch.nn.functional as F
+
+from networks import VAE, VQVAE, VQVAE2
 from utils import print_progress_bar, CustomImageFolder, deconvolve
 
+from os import getenv
+from os.path import join
+from dotenv import load_dotenv
+
+load_dotenv()
+root = getenv('root')
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-root = ".."
-epochs = 250
+batch_size = 64
+learning_rate = 1e-3
+beta = 0.5
+
+def train_vae(model_name, epochs=500, load=False, image_size=256):
     
-def train_vae(model_name, load=False, image_size=256):
+    # VAE Loss Function
+    def loss_function(x, x_hat, mean, log_var):        
+        reproduction_loss = F.binary_cross_entropy(x_hat, x, reduction='sum')
+        KLD = - 0.5 * torch.sum(1+ log_var - mean.pow(2) - log_var.exp())
+        return reproduction_loss + KLD
     
-    # Pretrained Autoencoder
-    model_name = "pae_" + model_name
-    
+    # Load data
     dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=image_size)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
     
-    model = VQVAE()
+    # Create and load model
+    model_path = join(root, "models", model_name)
+    model = VAE()
     if(load):
-        model.load_state_dict(torch.load(f"{root}/models/{model_name}", map_location=device))
+        model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
+    
+    # Establish optimiser
+    optimiser = optim.Adam(model.parameters(), lr=1e-4)
+    
+    for epoch in range(epochs):
+        for i, (images, _) in enumerate(dataloader):
+            print_progress_bar(epoch, i, len(dataloader))
+            
+            # Convert images for pytorch
+            images = images.to(device)
+            
+            # Actual training    
+            optimiser.zero_grad()
+            recon_images, mean, var = model(images)
+            recon_loss = loss_function(deconvolve(images), recon_images, mean, var)
+            recon_loss.backward()
+            optimiser.step()
+            
+        # Save model
+        try:
+            torch.save(model.state_dict(), model_path)
+        except:
+            print(f"\nFailed to save at epoch: {epoch}")
+        
+        # Infrequent backups
+        if epoch % 50 == 0:
+            try:
+                torch.save(model.state_dict(), join(root, "models", f"BACKUP{epoch}-{model_name}"))
+            except:
+                print(f"\nFailed to save backup at: {epoch}")
+        torch.cuda.empty_cache()
+    
+
+    
+def train_vqvae(model_name, model_type, epochs=500, load=False, image_size=256):
+    
+    # Load data for training
+    dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size=image_size)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    
+    # Create and load model
+    model_path = join(root, "models", model_name)
+    model = model_type()
+    if(load):
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    model.to(device)
+    
+    # Establish optimisers
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
     
-    
+    # Training
     for epoch in range(epochs):
-        
         for i, (images, _) in enumerate(dataloader):
-            
             print_progress_bar(epoch, i, len(dataloader))
             
-            # convert images for pytorch
+            # Convert images for pytorch
             images = images.to(device)
         
-            # actual training    
+            # Actual training    
             optimiser.zero_grad()
             recon_images, codebook_loss = model(images)    
             recon_loss = mse_loss(recon_images, images)
@@ -42,23 +102,24 @@ def train_vae(model_name, load=False, image_size=256):
             loss.backward()
             optimiser.step()        
 
-        # save model
+        # Save model
         try:
-            torch.save(model.state_dict(), f"{root}/models/{model_name}")
+            torch.save(model.state_dict(), model_path)
         except:
             print(f"\nFailed to save at epoch: {epoch}")
         
-        
-        if epoch % 25 == 0:
+        # Infrequent backups
+        if epoch % 50 == 0:
             try:
-                torch.save(model.state_dict(), f"{root}/models/BACKUP_{epoch}_{model_name}")
+                torch.save(model.state_dict(), join(root, "models", f"BACKUP{epoch}-{model_name}"))
             except:
-                print(f"\nFailed to save backup: {epoch}")
+                print(f"\nFailed to save backup at: {epoch}")
         torch.cuda.empty_cache()
     
     
 
-if __name__ == "__main__":
+if __name__ == "__main__":  
+    
     while True:
         answer = input("Train existing [1] or new model [2]? ").strip()
         if answer in ["1", "2"]:
@@ -83,5 +144,30 @@ if __name__ == "__main__":
                 print("Size must be a positive number no greater than 256.")
         except ValueError:
             print("Invalid input. Please enter a whole number.")
+    
+    while True:
+        try:
+            epochs = int(input("Please enter the number of epochs (max 2000): ").strip())
+            if 0 < epochs <= 2000:
+                break
+            else:
+                print("Size must be a positive number no greater than 2000.")
+        except ValueError:
+            print("Invalid input. Please enter a whole number.")
 
-    train_vae(name, load=load, image_size=size) 
+
+    while True:
+        answer = input("Train hierarchical [1], VQVAE [2], or VAE [3]? ").strip()
+        if answer == "1":
+            train_vqvae(name, model_type=VQVAE2, load=load, epochs=epochs, image_size=size) 
+            break
+        elif answer == "2":
+            train_vqvae(name, model_type=VQVAE, load=load, epochs=epochs, image_size=size) 
+            break
+        elif answer == "3":
+            train_vae(name, load=load, epochs=epochs, image_size=size)
+            break
+        else:
+            print("Invalid input. Please enter 1, 2, or 3.")
+            
+    print("Completed training...")

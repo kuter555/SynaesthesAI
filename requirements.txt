@@ -4,3 +4,4 @@ torchvision
 regex
 librosa
 yt_dlp
+dotenv

@@ -1,15 +1,17 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models import vgg16
-from tqdm import tqdm
 
 from train_vqvae import train_vae
-from vqvae import VQVAE
-from utils import print_progress_bar, CustomImageFolder, deconvolve
+from networks import VQVAE, Discriminator, PerceptualLoss
+from utils import print_progress_bar, CustomImageFolder
     
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
+root = getenv('root')
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-root = ".."
 epochs = 1000
 batch_size = 64
 learning_rate = 1e-4
@@ -19,31 +21,7 @@ use_perceptual = False # Toggle if you want to try VGG-based perceptual loss
 image_size = 256
 freeze_epochs = 10
 
-class Discriminator(nn.Module):
-    def __init__(self, in_channels=3, ndf=64):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Conv2d(in_channels, ndf, 4, 2, 1), nn.LeakyReLU(0.2),
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1), nn.BatchNorm2d(ndf * 2), nn.LeakyReLU(0.2),
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1), nn.BatchNorm2d(ndf * 4), nn.LeakyReLU(0.2),
-            nn.Conv2d(ndf * 4, 1, 4, 1, 0)  # No sigmoid (use BCEWithLogits)
-        )
-    
-    def forward(self, x):
-        return self.net(x)
-    
-class PerceptualLoss(nn.Module):
-    def __init__(self):
-        super().__init__()
-        vgg = vgg16(pretrained=True).features[:16].eval()
-        for param in vgg.parameters():
-            param.requires_grad = False
-        self.vgg = vgg.to(device)
 
-    def forward(self, x, y):
-        x_vgg = self.vgg(x)
-        y_vgg = self.vgg(y)
-        return F.l1_loss(x_vgg, y_vgg)
     
     
 def train(model_name, load=False, image_size=256):

@@ -1,20 +1,21 @@
-from vqvae import LatentGPT
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from PIL import Image
-from utils import print_progress_bar, HierarchicalLatentDataset, LatentDataset
-from vqvae import VQVAE, LatentGPT, BottomGPT
-from train_lstm import extract_latent_codes
 
+from utils import print_progress_bar, HierarchicalLatentDataset, LatentDataset, extract_latent_codes
+from networks import VQVAE, LatentGPT, BottomGPT
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+root = os.getenv('root')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
 
 
 def train_gpt(model, top_latents, bottom_latents, train_top=True, num_epochs=100):
     
-    root = ".."
     print("Pre training")
     torch.cuda.empty_cache()
     vqvae = VQVAE()    
