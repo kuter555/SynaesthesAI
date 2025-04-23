@@ -392,6 +392,7 @@ def extract_audio_latent_codes(model_path, t_latent_name, b_latent_name, image_s
             model.load_state_dict(checkpoint["vqgan"])
         except Exception as e:
             print(f"Unable to load model: {e}. Exiting...")
+            return
     model.to(device)
     
     print("Starting image processing")
