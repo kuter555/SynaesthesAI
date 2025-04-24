@@ -46,7 +46,7 @@ def train_vae(model_name, epochs=500, load=False, image_size=256):
             # Convert images for pytorch
             images = images.to(device)
             
-            # Actual training    
+            # Actual training
             optimiser.zero_grad()
             recon_images, mean, var = model(images)
             recon_loss = loss_function(deconvolve(images), recon_images, mean, var)

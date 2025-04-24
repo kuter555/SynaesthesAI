@@ -261,26 +261,24 @@ def print_progress_bar(epoch, iteration, total, length=50):
 # WILL ONLY WORK FOR VAE
 def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_path):
     
-    print("Beginning Extraction")
     
     dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VAE()
     model_path = os.path.join(root, "models", model_path)
-    print("Loading Model Dict")
     try:
         model.load_state_dict(torch.load(model_path, map_location=device))
     except Exception as e:
         print(f"Unable to load model: {e}. Exiting...")
     model.to(device)
     
-    print("Starting image processing")
     
     with torch.no_grad():
         model.eval()
         stored_latents = []
         stored_audio = []
+        print("Dataloader Length: ", len(dataloader))
         for i, (audio, images) in enumerate(dataloader):
             print_progress_bar("Extracting", i, len(dataloader))
             
@@ -308,8 +306,6 @@ def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_p
 # WILL ONLY WORK FOR VQVAE-2
 def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, b_latent_name, image_size, output_path):
         
-    print("Beginning Extraction")
-    
     dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
@@ -328,7 +324,6 @@ def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, 
     
     audio_model = VQVAE()
     audio_model_path = os.path.join(root, "models", audio_model_path)
-    print("Loading Model Dict")
     try:
         audio_model.load_state_dict(torch.load(audio_model_path, map_location=device))
     except:
@@ -346,6 +341,7 @@ def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, 
         stored_latent_t = []
         stored_latent_b = []
         stored_audio = []
+        print("Dataloader Length: ", len(dataloader))
         for i, (audio, images) in enumerate(dataloader):
             
             print_progress_bar("Extracting", i, len(dataloader))
@@ -375,15 +371,12 @@ def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, 
     
     
 def extract_audio_latent_codes(model_path, t_latent_name, b_latent_name, image_size, output_path):
-        
-    print("Beginning Extraction")
-    
+            
     dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
     model = VQVAE2()
     model_path = os.path.join(root, "models", model_path)
-    print("Loading Model Dict")
     try:
         model.load_state_dict(torch.load(model_path, map_location=device))
     except:
@@ -402,6 +395,7 @@ def extract_audio_latent_codes(model_path, t_latent_name, b_latent_name, image_s
         stored_latent_t = []
         stored_latent_b = []
         stored_audio = []
+        print("Dataloader Length: ", len(dataloader))
         for i, (audio, images) in enumerate(dataloader):
             
             print_progress_bar("Extracting", i, len(dataloader))

@@ -89,7 +89,6 @@ def train_audio_lstm_vae(model_name, latents, size, num_epochs=100):
 # ALLOWS TRAINING OF VQVAE-2 and VQGAN
 def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_epochs=100, load_top=False):
 
-    
     output_path = input("What is your desired output path/where are latents stored?: ")
     answer = input("Do you need to generate latent codes? (y/n): ")
     if answer == "y":
@@ -132,8 +131,8 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
     t_dataset = AudioLatentDataset(top_sequence, audio_info)
     b_dataset = AudioInheritedLatentDataset(bottom_sequence, top_sequence, audio_info)   
     
-    lstm = AudioLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=audio_info.shape[1], audio_embed_dim=512).to(device)
-    bottom_lstm = AudioInheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=audio_info.shape[1], audio_embed_dim=512).to(device)
+    lstm = AudioLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
+    bottom_lstm = AudioInheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimiser = optim.Adam(lstm.parameters(), lr=1e-3)

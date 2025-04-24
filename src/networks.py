@@ -120,6 +120,7 @@ class InheritedLatentLSTM(nn.Module):
     
 
 class AudioLatentLSTM(nn.Module):
+    # audio dim = image resolution
     def __init__(self, vocab_dim, embedding_dim, hidden_dim, layers, audio_dim, audio_embed_dim):
         super(AudioLatentLSTM, self).__init__()
         self.layers = layers
@@ -130,7 +131,7 @@ class AudioLatentLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, vocab_dim)
         
         self.audio_encoder = nn.Sequential(
-            nn.Linear(3 * 256 * 256, audio_embed_dim),
+            nn.Linear(3 * audio_dim * audio_dim, audio_embed_dim),
             nn.ReLU(),
             nn.Linear(audio_embed_dim, layers * hidden_dim * 2)
         )
@@ -165,7 +166,7 @@ class AudioInheritedLatentLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, vocab_dim)
         
         self.audio_encoder = nn.Sequential(
-            nn.Linear(3 * 256 * 256, audio_embed_dim),
+            nn.Linear(3 * audio_dim * audio_dim, audio_embed_dim),
             nn.ReLU(),
             nn.Linear(audio_embed_dim, layers * hidden_dim * 2)
         )
@@ -483,6 +484,7 @@ class VAE(nn.Module):
         mean = self.mean(x)
         var = self.logvar(x)
         return mean, var
+    
     
     def reparameterization(self, mean, var):
         epsilon = torch.randn_like(var).to(device)
