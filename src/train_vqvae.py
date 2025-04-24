@@ -86,6 +86,8 @@ def train_vqvae(model_name, model_type, data_file="downloaded_images", epochs=50
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
     
+    last_saved = 0
+    
     # Training
     for epoch in range(epochs):
         for i, (images, _) in enumerate(dataloader):
@@ -103,10 +105,15 @@ def train_vqvae(model_name, model_type, data_file="downloaded_images", epochs=50
             optimiser.step()        
 
         # Save model
-        try:
-            torch.save(model.state_dict(), model_path)
-        except:
-            print(f"\nFailed to save at epoch: {epoch}")
+        
+        if last_saved >= 10:
+            try:
+                torch.save(model.state_dict(), model_path)
+                last_saved = 0
+            except:
+                print(f"\nFailed to save at epoch: {epoch}")
+        else:
+            last_saved += 1
         
         # Infrequent backups
         if epoch > 0 and epoch % 25 == 0:

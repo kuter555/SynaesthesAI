@@ -42,7 +42,6 @@ def train(model_name, load=False, image_size=256):
     # Optimizers
     optimiser = torch.optim.Adam(vqvae.parameters(), lr=learning_rate)
     gan_optimiser = torch.optim.Adam(D.parameters(), lr=learning_rate)
-    mse_loss = torch.nn.MSELoss()
 
     dataset = CustomImageFolder(f"{root}/data/downloaded_images", image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
@@ -71,8 +70,6 @@ def train(model_name, load=False, image_size=256):
             gan_fake = D(recon_images.detach())
             gan_loss = F.binary_cross_entropy_with_logits(gan_real, torch.ones_like(gan_real)) + \
                      F.binary_cross_entropy_with_logits(gan_fake, torch.zeros_like(gan_fake))
-
-            recon_loss = mse_loss(recon_images, images)
 
             gan_optimiser.zero_grad()
             gan_loss.backward()

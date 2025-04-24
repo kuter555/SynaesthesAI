@@ -134,7 +134,7 @@ class AudioLatentLSTM(nn.Module):
             nn.Linear(3 * audio_dim * audio_dim, audio_embed_dim),
             nn.ReLU(),
             nn.Linear(audio_embed_dim, layers * hidden_dim * 2)
-        )
+        )   
         
     def forward(self, x, audio_features): 
         
@@ -229,6 +229,7 @@ class BottomGPT(nn.Module):
         )
         self.model = GPT2LMHeadModel(config)
 
+    # INVESTIGATE CONDITIONING
     def forward(self, input_ids):
         return self.model(input_ids).logits
 
@@ -517,10 +518,10 @@ class VQVAE(nn.Module):
         self.beta = beta
         
         # little bit deep a network but hey ho
-        self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
+        self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=2)
         self.pre_codebook =  nn.Conv2d(channels, embedding_dim, kernel_size=1)
         self.codebook = Quantize(embedding_dim, num_embeddings)
-        self.decoder = Decoder(embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims, stride=4)
+        self.decoder = Decoder(embedding_dim, input_dim, channels, n_residual_blocks, n_residual_dims, stride=2)
         
     def encode(self, x):
         x = self.encoder(x)
@@ -593,7 +594,6 @@ class VQVAE2(nn.Module):
     def forward(self, input):
         quant_t, quant_b, diff, _, _, = self.encode(input)
         dec = self.decode(quant_t, quant_b)
-
         return dec, diff.mean() * self.beta
 
 

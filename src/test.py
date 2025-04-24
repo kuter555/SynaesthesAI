@@ -110,6 +110,7 @@ if __name__ == "__main__":
             for file in files:
                 if file.endswith(".pth"):
                     full_path = os.path.relpath(os.path.join(subdir, file), model_dir)
+                    full_path = full_path.replace(os.sep, "/")
                     model_files.append(full_path)
 
         if not model_files:
@@ -123,29 +124,48 @@ if __name__ == "__main__":
                 selected = input("Enter the name of your VAE model from the list above: ").strip()
                 break
 
-            while True:
-                try:
-                    size = int(input("Please enter the size of your images (max 256): ").strip())
-                    if 0 < size <= 256:
+            if selected == "all":
+                for i in range(len(model_files)):
+                    print("Testing model: ", model_files[i])
+                    selected = model_files[i]
+                    size = int(input("Please enter the size of these images (max 256): ").strip())
+                    model = input("Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: ")
+                    if model == "-1":
+                        continue
+                    try:
+                        if model == "1":
+                            test_vqvae(selected, VAE, size)
+                        elif model == "2":
+                            test_vqvae(selected, VQVAE, size)
+                        elif model == "3":
+                            test_vqvae(selected, VQVAE2, size)
+                    except:
+                        print("Something went wrong...")
+
+            else:
+                while True:
+                    try:
+                        size = int(input("Please enter the size of your images (max 256): ").strip())
+                        if 0 < size <= 256:
+                            break
+                        else:
+                            print("Size must be a positive number no greater than 256.")
+                    except ValueError:
+                        print("Invalid input. Please enter a whole number.")
+
+
+                while True:
+                    model = input("Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: ")
+                    if model == "1":
+                        test_vqvae(selected, VAE, image_size=size)
+                        break
+                    elif model == "2":
+                        test_vqvae(selected, VQVAE, size)
+                        break
+                    elif model == "3":
+                        test_vqvae(selected, VQVAE2, size)
                         break
                     else:
-                        print("Size must be a positive number no greater than 256.")
-                except ValueError:
-                    print("Invalid input. Please enter a whole number.")
-
-
-            while True:
-                model = input("Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: ")
-                if model == "1":
-                    test_vqvae(selected, VAE, image_size=size)
-                    break
-                elif model == "2":
-                    test_vqvae(selected, VQVAE, size)
-                    break
-                elif model == "3":
-                    test_vqvae(selected, VQVAE2, size)
-                    break
-                else:
-                    print("Invalid input. Please enter either 1, 2, or 3.")
+                        print("Invalid input. Please enter either 1, 2, or 3.")
 
     print("Done")
