@@ -20,7 +20,6 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
     AudioEncoder = model_type(input_dim=3)
     ImageEncoder = model_type(input_dim=3)
     
-    
     try:
         img_model_path = join(root, "models", img_model_name)
         ImageEncoder.load_state_dict(torch.load(img_model_path, map_location=device))

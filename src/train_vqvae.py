@@ -60,7 +60,7 @@ def train_vae(model_name, epochs=500, load=False, image_size=256):
             print(f"\nFailed to save at epoch: {epoch}")
         
         # Infrequent backups
-        if epoch % 50 == 0:
+        if epoch > 0 and epoch % 25 == 0:
             try:
                 torch.save(model.state_dict(), join(root, "models", f"BACKUP{epoch}-{model_name}"))
             except:
@@ -109,7 +109,7 @@ def train_vqvae(model_name, model_type, data_file="downloaded_images", epochs=50
             print(f"\nFailed to save at epoch: {epoch}")
         
         # Infrequent backups
-        if epoch % 50 == 0:
+        if epoch > 0 and epoch % 25 == 0:
             try:
                 torch.save(model.state_dict(), join(root, "models", f"BACKUP{epoch}-{model_name}"))
             except:
