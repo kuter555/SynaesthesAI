@@ -96,9 +96,9 @@ def train_vqvae(model_name, model_type, data_file="downloaded_images", epochs=50
         
             # Actual training    
             optimiser.zero_grad()
-            recon_images, codebook_loss = model(images)    
+            recon_images, quanitsed_loss = model(images)    
             recon_loss = mse_loss(recon_images, images)
-            loss = recon_loss + codebook_loss
+            loss = recon_loss + quanitsed_loss
             loss.backward()
             optimiser.step()        
 

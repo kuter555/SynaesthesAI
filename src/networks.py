@@ -525,9 +525,9 @@ class VQVAE(nn.Module):
     def encode(self, x):
         x = self.encoder(x)
         quant_input = self.pre_codebook(x).permute(0,2,3,1)
-        quant, diffs, ids = self.codebook(quant_input)
+        quant, codebook_loss, ids = self.codebook(quant_input)
         quant = quant.permute(0, 3, 1, 2)
-        return quant, diffs, ids
+        return quant, codebook_loss, ids
 
     def decode(self, quant):
         output = self.decoder(quant)
@@ -535,14 +535,19 @@ class VQVAE(nn.Module):
     
     # For sampling, may not use
     def decode_code(self, quant):
+        
         quant = self.codebook.embed_code(quant).permute(0,3,1,2)
         output = self.decode(quant)
         return output
 
     def forward(self, x):
-        quant_out, diff, _, = self.encode(x)
+        quant_out, codebook_loss, ids, = self.encode(x)
         output = self.decode(quant_out)
-        return output, diff.mean() * self.beta
+        
+        commitment_loss = F.mse_loss(quant_out, ids.detach())
+        total_loss = commitment_loss + codebook_loss.mean() * self.beta
+        
+        return output, total_loss
 
 
 
