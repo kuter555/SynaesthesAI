@@ -31,7 +31,7 @@ def train_vae(model_name, epochs=500, load=False, image_size=256):
     
     # Create and load model
     model_path = join(root, "models", model_name)
-    model = VAE()
+    model = VAE(model_image_size=image_size)
     if(load):
         model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
@@ -49,7 +49,7 @@ def train_vae(model_name, epochs=500, load=False, image_size=256):
             # Actual training
             optimiser.zero_grad()
             recon_images, mean, var = model(images)
-            recon_loss = loss_function(deconvolve(images), recon_images, mean, var)
+            recon_loss = loss_function(deconvolve(images), deconvolve(recon_images), mean, var)
             recon_loss.backward()
             optimiser.step()
             

@@ -464,7 +464,7 @@ class VAE(nn.Module):
         super().__init__()      
         
         self.latent_dim = 256
-        self.flatten_dim = 128 * model_image_size
+        self.flatten_dim = model_image_size * model_image_size
         
         self.encoder = EncoderVAE(latent_dim=self.latent_dim)
         
@@ -517,7 +517,7 @@ class VQVAE(nn.Module):
         
         self.beta = beta
         
-        # little bit deep a network but hey ho
+        # little bit deep a network but hey ho                                          Should be stride=2
         self.encoder = Encoder(input_dim, channels, n_residual_blocks, n_residual_dims, stride=2)
         self.pre_codebook =  nn.Conv2d(channels, embedding_dim, kernel_size=1)
         self.codebook = Quantize(embedding_dim, num_embeddings)
