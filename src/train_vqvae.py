@@ -125,7 +125,7 @@ def train_vqvae(model_name, model_type, data_file="downloaded_images", epochs=50
     
     
     
-def train_audio_vqvae(model_name, load=False):
+def train_audio_vqvae(model_name, load=False, epochs=500):
     
     # Load data for training
     dataset = CustomAudioFolder(join(root,"data/spectrograms"))
