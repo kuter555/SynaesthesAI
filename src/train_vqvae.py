@@ -129,7 +129,7 @@ def train_audio_vqvae(model_name, load=False, epochs=500):
     
     # Load data for training
     dataset = CustomAudioFolder(join(root,"data/spectrograms"))
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=2, pin_memory=False)
     
     # Create and load model
     model_path = join(root, "models", model_name)
