@@ -154,7 +154,11 @@ def train_audio_vqvae(model_name, load=False, epochs=500):
         
             # Actual training    
             optimiser.zero_grad()
-            recon_audio, quanitsed_loss = model(audio)    
+            recon_audio, quanitsed_loss = model(audio) 
+            
+            audio = audio[..., :430]
+            recon_audio = recon_audio[..., :430]
+               
             recon_loss = mse_loss(recon_audio, audio)
             loss = recon_loss + quanitsed_loss
             loss.backward()
