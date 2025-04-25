@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
 
-from utils import print_progress_bar, deconvolve, AudioLatentDataset, AudioInheritedLatentDataset, LatentDataset, InheritedLatentDataset, extract_latent_codes, extract_audio_latent_codes, extract_audio_latent_codes_vae
+from utils import print_progress_bar, deconvolve, AudioLatentDataset, AudioInheritedLatentDataset, LatentDataset, CustomAudioImagePairing, InheritedLatentDataset, extract_latent_codes, extract_audio_latent_codes, extract_audio_latent_codes_vae
 from networks import VAE, VQVAE, VQVAE2, LatentLSTM, InheritedLatentLSTM, AudioLatentLSTM, AudioInheritedLatentLSTM
 
 from dotenv import load_dotenv
@@ -187,10 +187,6 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
 
 
 
-
-
-
-
 # ALLOWS TRAINING OF VQVAE-2 and VQGAN
 def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs=100, load_top=False):
 
@@ -200,8 +196,6 @@ def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs
         if not exists(join(root, "models", "LSTM", output_path)):
             makedirs(join(root, "models", "LSTM", output_path))
         extract_latent_codes(model_name, t_latents, b_latents, size, output_path)
-
-
 
     torch.cuda.empty_cache()
     model = VQVAE2()
@@ -281,31 +275,49 @@ def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs
             print("\nFailed to save bottom LSTM")
 
 
-def decode():
+def decode(image_model, stored_location, t_lstm, b_lstm, image_size, use_audio=False):
     
     torch.cuda.empty_cache()
-    model = VQVAE()
+    model = VQVAE2()
     try:
-        model.load_state_dict(torch.load(f"{root}/models/vae.pth", map_location=device))
-        model.to(device)       
         
-        top_lstm = LatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
-        top_lstm.load_state_dict(torch.load(f"{root}/models/t_lstm.pth", map_location=device))
+        if use_audio:
+            top_lstm = AudioLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=image_size, audio_embed_dim=512).to(device)
+            bottom_lstm = AudioInheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=image_size, audio_embed_dim=512).to(device)
+        else:
+            top_lstm = LatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
+            bottom_lstm = InheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
 
-        bottom_lstm = InheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
-        bottom_lstm.load_state_dict(torch.load(f"{root}/models/b_lstm.pth", map_location=device))
+        top_lstm.load_state_dict(torch.load(join(root, "models/LSTM", stored_location, t_lstm), map_location=device))
+        bottom_lstm.load_state_dict(torch.load(join(root, "models/LSTM", stored_location, b_lstm), map_location=device))
     
     except Exception as e:
-        print(f"Failed to run: {e} Exiting...")
+        print(f"Failed to recover LSTMs: {e} Exiting...")
         return -1
     
-    top_latents, bottom_latents = sample_latents(top_lstm, bottom_lstm, 0, 65536)
+    try:
+        model.load_state_dict(torch.load(join(root, "models", image_model), map_location=device))
+    except Exception as e:        
+        try:
+            checkpoint = torch.load(join(root, "models", image_model), map_location=device)
+            model.load_state_dict(checkpoint["vqgan"])
+        except Exception as e:
+            print(f"Unable to load model: {e}. Exiting...")
+            return    
+    
+    if not use_audio:
+        top_latents, bottom_latents = sample_latents(top_lstm, bottom_lstm, 0, image_size * image_size)
+    else:
+        top_latents, bottom_latents = sample_latents_with_audio(top_lstm, bottom_lstm, 0, image_size, "VQGAN-FT128/t_latents.pt")
+    
     
     top_latents = top_latents.view(1, 32, 32)
     bottom_latents = bottom_latents.view(1, 64, 64)
     with torch.no_grad():
         recon = model.decode_code(top_latents, bottom_latents)
         Image.fromarray((deconvolve(recon[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}/data/test_images/lstm_test.jpeg")
+    
+    
     
 def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
     
@@ -333,8 +345,8 @@ def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
     for _ in range(top_sequence_length - 1):
         with torch.no_grad():
             output, hidden = lstm(input_seq, hidden)
-            top_generated.append(next_token.item())
-            input_seq = next_token
+            top_generated.append(output.item())
+            input_seq = output
 
     top_generated = torch.tensor(top_generated, device=device).unsqueeze(0).long()  # shape: (1, sequence_length)
     bottom_generated = []
@@ -351,9 +363,70 @@ def sample_latents(lstm, bottom_lstm, start_token, _, temperature=0.5):
     
     return top_generated, torch.tensor(bottom_generated, device=device)
     
+
+def sample_latents_with_audio(lstm, bottom_lstm, start_token, size, t_latents, temperature=0.5):
     
+    print("Sampling with audio")
+    
+    lstm.eval()
+    bottom_lstm.eval()
+    
+    top_sequence_length = 32 * 32
+    bottom_sequence_length = 64 * 64
+    
+    try:
+        top_latents = torch.load(join(root, "models", "LSTM", t_latents)).to(device)
+        top_sequence = top_latents.view(top_latents.size(0), -1)
+        
+        AudioDataset = CustomAudioImagePairing(join(root, "data/downloaded_images"), join(root, "data/spectrograms"), size)
+        
+    except Exception as e:
+        print(f"Error: {e}, couldn't extract latents...")
+        return -1, -1
+
+    t_dataset = LatentDataset(top_sequence)    
+    start_token, _ = t_dataset[0]
+    start_token = start_token[0].item()
+
+    audio_input, _ = AudioDataset[1]
+    audio_input = audio_input.unsqueeze(0).to(device)
+    
+    top_generated = [start_token]
+    input_seq = torch.tensor([[start_token]], device=device).long()
+
+    for _ in range(top_sequence_length - 1):
+        with torch.no_grad():
+            output, _ = lstm(input_seq, audio_input)
+            next_token = output[:, -1].argmax(dim=-1)
+            top_generated.append(next_token.item())
+            
+            input_seq = torch.cat([input_seq, next_token.unsqueeze(0)], dim=-1).long()
+            
+    print("Sampled top latents")
+            
+
+    top_generated = torch.tensor(top_generated, device=device).unsqueeze(0).long()  # shape: (1, sequence_length)
+    bottom_generated = []
+    input_seq = torch.zeros((1, 1), device=device).long()  # Start with some neutral token
+
+    for _ in range(bottom_sequence_length):  # 64 * 64 = 4096
+        with torch.no_grad():
+            output, _ = bottom_lstm(input_seq, top_generated, audio_input)
+            probs = torch.softmax(output[:, -1, :] / temperature, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)
+            bottom_generated.append(next_token.item())
+            input_seq = next_token.unsqueeze(0)
+    
+    print("Sampled bottom latents")
+    
+    return top_generated, torch.tensor(bottom_generated, device=device)
+        
 
 if __name__ == "__main__":
+    
+    
+    #decode("128x128/VQGAN-FT128.pth", "VQGAN-FT128", "t_lstm.pth", "b_lstm.pth", 128, True)
+    
     
     while True:
         model_name = input("Please enter the name of your image model: ").strip()
@@ -433,6 +506,10 @@ if __name__ == "__main__":
             break
         
         elif answer == "3":
+            audio = input("Do you want to use audio? (y/n): ")
+            use_audio = audio == "y"
+            output_path = input("Where is your data stored? (LSTM/[?]): ")
+            decode(model_name, output_path, "t_lstm.pth", "b_lstm.pth", size, use_audio)
             break
         
         else:

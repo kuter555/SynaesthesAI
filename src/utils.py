@@ -227,7 +227,6 @@ class CustomImageFolder(Dataset):
                         
                     except:
                         continue
-     
     
     def __len__(self):
         return len(self.image_files)
@@ -246,6 +245,51 @@ class CustomImageFolder(Dataset):
             return self.__getitem__((idx + 1) % len(self))
 
 
+
+class CustomAudioFolder(Dataset):
+    
+    def __init__(self, root_dir):
+        
+        self.root_dir = root_dir
+        self.spectrograms = []
+                
+        for _, _, x_files in os.walk(self.audio_dir):
+            for file in x_files:
+                if file.lower().endswith('.npy'):
+                    try:
+                        full_path = os.path.join(root_dir, file)
+                        self.spectrograms.append(full_path)
+                    except:
+                        continue        
+    
+    
+    def __len__(self):
+        return len(self.spectrograms)
+    
+    
+    def __getitem__(self, idx):
+        audio_path = self.spectrograms[idx]
+        try:
+            spectrogram = np.load(audio_path)
+            spectrogram = from_numpy(spectrogram).float()  # convert to tensor
+
+            if spectrogram.ndim == 3:
+                spectrogram = spectrogram.unsqueeze(0)
+            elif spectrogram.ndim == 2:
+                spectrogram = spectrogram.unsqueeze(0).unsqueeze(0)
+
+            spectrogram = spectrogram.repeat(1, 3, 1, 1)
+            spectrogram = spectrogram.squeeze(0)    
+            return spectrogram
+        
+        except:
+            return self.__getitem__((idx + 1) % len(self))
+
+
+
+
+
+
 def print_progress_bar(epoch, iteration, total, length=50):
     progress = int(length * iteration / total)
     if epoch != -1:
@@ -260,8 +304,6 @@ def print_progress_bar(epoch, iteration, total, length=50):
     
 # WILL ONLY WORK FOR VAE
 def extract_audio_latent_codes_vae(model_path, latent_name, image_size, output_path):
-    
-    
     dataset = CustomAudioImagePairing(f"{root}/data/downloaded_images", audio_dir=f"{root}/data/spectrograms", size=image_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
     
