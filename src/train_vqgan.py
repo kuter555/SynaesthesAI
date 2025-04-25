@@ -2,9 +2,10 @@ import torch
 import torch.nn.functional as F
 
 from train_vqvae import train_vae
-from networks import VQVAE, Discriminator, PerceptualLoss
+from networks import VQVAE2, Discriminator, PerceptualLoss
 from utils import print_progress_bar, CustomImageFolder
     
+import os
 from os import getenv
 from dotenv import load_dotenv
 
@@ -24,16 +25,17 @@ freeze_epochs = 10
 
     
     
-def train(model_name, load=False, image_size=256):
-    
-    print("Beginning Loading VQGAN")
-    vqvae = VQVAE()
+def train(model_name, vqvae_model="", load=False, image_size=256):
+
+
+    vqvae = VQVAE2()
     D = Discriminator()
     
-    if(load):
-        vqvae.load_state_dict(torch.load(f"{root}/models/pae_{model_name}", map_location=device))
+    if vqvae_model != "":
+        vqvae.load_state_dict(torch.load(os.path.join(f"{root}/models/{model_name}"), map_location=device))
         for param in vqvae.parameters():
             param.requires_grad = False
+
     
     D.to(device)
     vqvae.to(device)
@@ -107,20 +109,32 @@ def train(model_name, load=False, image_size=256):
             
 
 if __name__ == "__main__":
+
+    og_model = ""
     while True:
         answer = input("Train existing [1] or new model [2]? ").strip()
-        if answer in ["1", "2"]:
-            load = answer == "1"
+        if answer == "1":
+            load = True
             break
-        print("Invalid input. Please enter 1 or 2.")
+        elif answer == "2":
+            load = False
+            load_vqvae = input("Would you like to use a premade VQVAE? (y/n): ")
+            if load_vqvae == "y":
+                og_model = input("What is the name of your premade VQVAE?: ")
+                break
+            else:
+                break            
+        else:
+            print("Invalid input. Please enter 1 or 2.")
 
     while True:
-        name = input("Please enter the name of your model: ").strip()
+        name = input("Please enter the name of your VQGAN model: ").strip()
         if name:
             if not name.endswith(".pth"):
                 name += ".pth"
             break
         print("Model name cannot be empty.")
+    
     
     while True:
         try:
@@ -133,6 +147,4 @@ if __name__ == "__main__":
             print("Invalid input. Please enter a whole number.")
 
 
-    print("Training VQ-VAE\n")
-    train_vae(name, load=False, image_size=size)
-    train(name, load=load, image_size=size)
+    train(name, vqvae_model=og_model, load=load, image_size=size)

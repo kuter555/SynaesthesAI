@@ -5,6 +5,7 @@ from PIL import Image
 from utils import deconvolve, CustomImageFolder, CustomAudioImagePairing
 import numpy as np
 import traceback
+import cv2
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Project/SynaesthesAI"
@@ -54,6 +55,8 @@ def test_vqvae(input_model, model_type, image_size):
 
 
 
+
+
 def test_audio_vqvae(root, audio_model, image_model):
     if not os.path.exists(audio_model) or not os.path.exists(image_model):    
         print("Model not found.")
@@ -88,7 +91,35 @@ def test_audio_vqvae(root, audio_model, image_model):
             Image.fromarray((deconvolve(image_output[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}data/outputs/first_audio_test{i}.jpeg")
 
     
+    
+
+def load_image(path, size=None):
+    image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    if size is not None:
+        image = cv2.resize(image, (size, size))
+    return image
+
+
+def generate_reconstruction_score(true_image, reconstruction):
+    
+    err = np.mean((true_image - reconstruction) ** 2)
+    return err
+
+
+    
 if __name__ == "__main__":
+    
+    #true = load_image(os.path.join(root, "data/ORIGINAL.png"), 128)
+    #gan64 = load_image(os.path.join(root, "data/VQGAN64.png"), 128)
+    #gan128 = load_image(os.path.join(root, "data/VQGAN128.png"), 128)
+    #gan256 = load_image(os.path.join(root, "data/VQGAN256.png"), 128)
+    #
+    #print("64 Score: ", generate_reconstruction_score(true, gan64))
+    #print("128 Score: ", generate_reconstruction_score(true, gan128))
+    #print("256 Score: ", generate_reconstruction_score(true, gan256))
+    
+    
+    
     
     audio_model = "models/audioVAE.pth"
         
