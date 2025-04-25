@@ -253,7 +253,7 @@ class CustomAudioFolder(Dataset):
         self.root_dir = root_dir
         self.spectrograms = []
                 
-        for _, _, x_files in os.walk(self.audio_dir):
+        for _, _, x_files in os.walk(self.root_dir):
             for file in x_files:
                 if file.lower().endswith('.npy'):
                     try:
