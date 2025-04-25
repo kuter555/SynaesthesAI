@@ -190,7 +190,7 @@ if __name__ == "__main__":
             break
         print("Invalid input. Please enter 1 or 2.")
         
-    if train_image == "2":
+    if not train_image:
         audio_model = input("What is the name of your audio model?: ")
         if not audio_model.endswith(".pth"):
             audio_model += ".pth"
