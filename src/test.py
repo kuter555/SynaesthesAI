@@ -76,14 +76,9 @@ def test_audio_vqvae(root, audio_model, image_model):
     for epoch in range(1):
         for i, (spectrograms, images) in enumerate(dataloader):
             
+            # SHOULD SET IT SO THAT I USE THE EMBEDDING
             audio_t, audio_b, _, _, _ = audio_vae.encode(spectrograms)
             
-            #audio_t = (audio_encoded_t - -0.01742841675877571) / (0.13349851965904236 + 1e-5)
-            #audio_t = audio_t * 0.24672505259513855 + -0.020536981523036957
-            #
-            #
-            #audio_b = (audio_encoded_b - -0.01742841675877571) / (0.13349851965904236 + 1e-5)
-            #audio_b = audio_b * 0.24672505259513855 + -0.020536981523036957
             
             
             image_output = image_vae.decode(audio_t, audio_b)

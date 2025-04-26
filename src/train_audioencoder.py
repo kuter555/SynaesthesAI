@@ -11,7 +11,7 @@ load_dotenv()
 root = getenv('root')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+beta = 0.25
 
 # Works for VQVAE-2 and VQGAN
 def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type, epochs=500, load=True):
@@ -47,6 +47,9 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
     
     ImageEncoder.to(device)
     AudioEncoder.to(device)
+    
+    for param in ImageEncoder.parameters():
+        param.requires_grad = False
         
     image_dir = join(root, "data/downloaded_images")
     audio_dir = join(root, "data/spectrograms")
@@ -70,12 +73,12 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
             
             # actual training    
             optimiser.zero_grad()
-            audio_t, audio_b, _, _, _ = AudioEncoder.encode(spectrograms)
+            audio_t, audio_b, commitment_loss, _, _ = AudioEncoder.encode(spectrograms)
             
             # LOSS FUNCTION
             vector_loss_t = mse_loss(audio_t, image_t)
             vector_loss_b = mse_loss(audio_b, image_b)
-            loss = vector_loss_b + vector_loss_t            
+            loss = vector_loss_b + vector_loss_t + beta * commitment_loss      
             
             # STEP OPTIMISER
             loss.backward()

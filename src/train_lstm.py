@@ -160,13 +160,13 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
 
             torch.cuda.empty_cache()
             
-            if epoch % 50 == 0 and epoch > 0:        
+            if epoch % 25 == 0 and epoch > 0:        
                 try:
                     torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"BACKUP{epoch}_t_lstm.pth"))
                 except:
                     print("Couldn't save top LSTM")
             
-            if last_saved > 15:
+            if last_saved > 20:
                 try:
                     torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"t_lstm.pth"))
                     last_saved = 0
@@ -193,7 +193,7 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
             optimiser.step()
             
         torch.cuda.empty_cache()
-        if epoch % 50 == 0 and epoch > 0:        
+        if epoch % 25 == 0 and epoch > 0:        
             try:
                 torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"BACKUP{epoch}_b_lstm.pth"))
             except:
