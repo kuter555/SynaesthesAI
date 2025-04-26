@@ -142,6 +142,7 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
     
     if not load_top:
         
+        print("Training top LSTM")    
         last_saved = 0
         
         for epoch in range(num_epochs):
@@ -175,6 +176,13 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
             else:
                 last_saved += 1
             
+    else:
+        print("Loading top")
+        lstm.load_state_dict(torch.load(join(root, "models", "LSTM", output_path, f"t_lstm.pth"), map_location=device))  
+        
+            
+            
+    print("Training bottom LSTM")
     # train the bottom LSTM
     for epoch in range(num_epochs):
         for i, (top_seq, bottom_inputs, bottom_targets, audio) in enumerate(b_dataloader):
