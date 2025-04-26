@@ -195,13 +195,13 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
         torch.cuda.empty_cache()
         if epoch % 25 == 0 and epoch > 0:        
             try:
-                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"BACKUP{epoch}_b_lstm.pth"))
+                torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", output_path, f"BACKUP{epoch}_b_lstm.pth"))
             except:
-                print("Couldn't save top LSTM")
+                print("Couldn't save bottom LSTM")
         
         if last_saved > 15:
             try:
-                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"b_lstm.pth"))
+                torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", output_path, f"b_lstm.pth"))
                 last_saved = 0
             except:
                 print("Couldn't save top LSTM")
@@ -298,26 +298,11 @@ def train_vanilla_lstm_hierarchical(model_name, t_latents, b_latents, num_epochs
             print("\nFailed to save bottom LSTM")
 
 
-def decode(image_model, stored_location, t_lstm, b_lstm, image_size, use_audio=False):
+def decode(image_model, stored_location, t_lstm, b_lstm, image_size, size=128, use_audio=False):
     
     torch.cuda.empty_cache()
     model = VQVAE2()
-    try:
-        
-        if use_audio:
-            top_lstm = AudioLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=image_size, audio_embed_dim=512).to(device)
-            bottom_lstm = AudioInheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=image_size, audio_embed_dim=512).to(device)
-        else:
-            top_lstm = LatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
-            bottom_lstm = InheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=3, layers=3).to(device)
-
-        top_lstm.load_state_dict(torch.load(join(root, "models/LSTM", stored_location, t_lstm), map_location=device))
-        bottom_lstm.load_state_dict(torch.load(join(root, "models/LSTM", stored_location, b_lstm), map_location=device))
-    
-    except Exception as e:
-        print(f"Failed to recover LSTMs: {e} Exiting...")
-        return -1
-    
+    vocab_size = 512    
     try:
         model.load_state_dict(torch.load(join(root, "models", image_model), map_location=device))
     except Exception as e:        
@@ -328,11 +313,26 @@ def decode(image_model, stored_location, t_lstm, b_lstm, image_size, use_audio=F
             print(f"Unable to load model: {e}. Exiting...")
             return    
     
+    try:
+        if use_audio:
+            print("Using audio")
+            top_lstm = AudioLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=4, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
+            bottom_lstm = AudioInheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=4, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
+        else:
+            top_lstm = LatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=4, layers=3).to(device)
+            bottom_lstm = InheritedLatentLSTM(model.num_embeddings, model.num_embeddings, hidden_dim=4, layers=3).to(device)
+
+        top_lstm.load_state_dict(torch.load(join(root, "models/LSTM", stored_location, t_lstm), map_location=device))
+        bottom_lstm.load_state_dict(torch.load(join(root, "models/LSTM", stored_location, b_lstm), map_location=device))
+    
+    except Exception as e:
+        print(f"Failed to recover LSTMs: {e} Exiting...")
+        return -1
+    
     if not use_audio:
         top_latents, bottom_latents = sample_latents(top_lstm, bottom_lstm, 0, image_size * image_size)
     else:
         top_latents, bottom_latents = sample_latents_with_audio(top_lstm, bottom_lstm, 0, image_size, "VQGAN-FT128/t_latents.pt")
-    
     
     top_latents = top_latents.view(1, 32, 32)
     bottom_latents = bottom_latents.view(1, 64, 64)
@@ -448,7 +448,7 @@ def sample_latents_with_audio(lstm, bottom_lstm, start_token, size, t_latents, t
 if __name__ == "__main__":
     
     
-    #decode("128x128/VQGAN-FT128.pth", "VQGAN-FT128", "t_lstm.pth", "b_lstm.pth", 128, True)
+    decode("128x128/VQGAN-FT128.pth", "ALT_VQGAN-FT128", "t_lstm.pth", "b_lstm.pth", 128, use_audio=True)
     
     
     while True:
