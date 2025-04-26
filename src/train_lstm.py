@@ -131,8 +131,8 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
     t_dataset = AudioLatentDataset(top_sequence, audio_info)
     b_dataset = AudioInheritedLatentDataset(bottom_sequence, top_sequence, audio_info)   
     
-    lstm = AudioLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
-    bottom_lstm = AudioInheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=3, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
+    lstm = AudioLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=4, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
+    bottom_lstm = AudioInheritedLatentLSTM(vocab_size, model.num_embeddings, hidden_dim=4, layers=3, audio_dim=size, audio_embed_dim=512).to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimiser = optim.Adam(lstm.parameters(), lr=1e-3)

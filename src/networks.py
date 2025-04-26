@@ -130,6 +130,8 @@ class AudioLatentLSTM(nn.Module):
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, layers, batch_first=True)
         self.fc = nn.Linear(hidden_dim, vocab_dim)
         
+        self.attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=4, batch_first=True)
+        
         self.audio_encoder = nn.Sequential(
             nn.Linear(3 * audio_dim * audio_dim, audio_embed_dim),
             nn.ReLU(),
@@ -149,9 +151,10 @@ class AudioLatentLSTM(nn.Module):
         h_0 = h_0.contiguous()
         c_0 = c_0.contiguous()
         
-        out, h = self.lstm(x, (h_0, c_0))
-        out = self.fc(out)
-        return out, h
+        out, (h_n, c_n) = self.lstm(x, (h_0, c_0))
+        attn_output, _ = self.attn(out, out, out)
+        out = self.fc(attn_output)
+        return out, (h_n, c_n)
       
       
 class AudioInheritedLatentLSTM(nn.Module):
