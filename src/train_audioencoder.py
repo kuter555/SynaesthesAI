@@ -57,6 +57,7 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
     optimiser = optim.Adam(AudioEncoder.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
     
+    last_saved = 0
     for epoch in range(epochs):
         for i, (spectrograms, images) in enumerate(dataloader):
             
@@ -80,10 +81,22 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
             loss.backward()
             optimiser.step()
             
-        try:
-            torch.save(AudioEncoder.state_dict(), join(root, "models", audio_model_name))
-        except:
-            print("\nFailed to save vae")
+            
+        if epoch % 50 == 0 and epoch > 0:        
+            try:
+                torch.save(AudioEncoder.state_dict(), join(root, "models", audio_model_name))
+            except:
+                print("Couldn't save model")
+        
+        if last_saved > 15:
+            try:
+                torch.save(AudioEncoder.state_dict(), join(root, "models", f"BACKUP{epoch}_{audio_model_name}"))
+                last_saved = 0
+            except:
+                print("Couldn't save model")
+        else:
+            last_saved += 1
+            
         
         torch.cuda.empty_cache()
             
