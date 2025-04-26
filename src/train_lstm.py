@@ -141,6 +141,9 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
     b_dataloader = DataLoader(b_dataset, batch_size=32, shuffle=True)
     
     if not load_top:
+        
+        last_saved = 0
+        
         for epoch in range(num_epochs):
             for i, (inputs, target, audio) in enumerate(t_dataloader):
                 print_progress_bar(epoch, i, len(t_dataloader))
@@ -156,11 +159,21 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
                 optimiser.step()
 
             torch.cuda.empty_cache()
-            try:
-                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, "t_lstm.pth"))
-            except:
-                print("Couldn't save top LSTM")
             
+            if epoch % 50 == 0 and epoch > 0:        
+                try:
+                    torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"BACKUP{epoch}_t_lstm.pth"))
+                except:
+                    print("Couldn't save top LSTM")
+            
+            if last_saved > 15:
+                try:
+                    torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"t_lstm.pth"))
+                    last_saved = 0
+                except:
+                    print("Couldn't save top LSTM")
+            else:
+                last_saved += 1
             
     # train the bottom LSTM
     for epoch in range(num_epochs):
@@ -180,10 +193,20 @@ def train_audio_lstm_hierarchical(model_name, t_latents, b_latents, size, num_ep
             optimiser.step()
             
         torch.cuda.empty_cache()
-        try:
-            torch.save(bottom_lstm.state_dict(), join(root, "models", "LSTM", output_path, "b_lstm.pth"))
-        except:
-            print("\nFailed to save bottom LSTM")
+        if epoch % 50 == 0 and epoch > 0:        
+            try:
+                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"BACKUP{epoch}_b_lstm.pth"))
+            except:
+                print("Couldn't save top LSTM")
+        
+        if last_saved > 15:
+            try:
+                torch.save(lstm.state_dict(), join(root, "models", "LSTM", output_path, f"b_lstm.pth"))
+                last_saved = 0
+            except:
+                print("Couldn't save top LSTM")
+        else:
+            last_saved += 1
 
 
 
