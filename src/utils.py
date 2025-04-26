@@ -270,6 +270,8 @@ class CustomAudioFolder(Dataset):
     def __getitem__(self, idx):
         audio_path = self.spectrograms[idx]
         try:
+            target_width = 430
+            
             spectrogram = np.load(audio_path)
             spectrogram = from_numpy(spectrogram).float()  # convert to tensor
 
@@ -280,6 +282,13 @@ class CustomAudioFolder(Dataset):
 
             spectrogram = spectrogram.repeat(1, 3, 1, 1)
             spectrogram = spectrogram.squeeze(0)    
+            
+            
+            if spectrogram.shape[-1] > target_width:
+                spectrogram = spectrogram[..., :target_width]
+            elif spectrogram.shape[-1] < target_width:
+                spectrogram = F.pad(spectrogram, (0, target_width - spectrogram.shape[-1]))
+            
             return spectrogram
         
         except:
