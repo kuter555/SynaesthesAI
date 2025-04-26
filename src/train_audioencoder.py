@@ -52,7 +52,7 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
     audio_dir = join(root, "data/spectrograms")
     
     dataset = CustomAudioImagePairing(image_dir, audio_dir, size=image_size)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=False)
     
     optimiser = optim.Adam(AudioEncoder.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
@@ -89,7 +89,7 @@ def train_audio_encoder(img_model_name, audio_model_name, image_size, model_type
             
             
             
-# Works for VQVAE-2 and VQGAN
+# Works for VAE
 def train_audio_encoder_vae(img_model_name, audio_model_name, image_size, epochs=500, load=True, beta=0.25):
             
     AudioEncoder = VAE(input_dim=3)
@@ -123,7 +123,6 @@ def train_audio_encoder_vae(img_model_name, audio_model_name, image_size, epochs
     optimiser = optim.Adam(AudioEncoder.parameters(), lr=1e-3)
     mse_loss = torch.nn.MSELoss()
     
-    
     # KL-divergence to improve the loss of variance
     def kl_divergence_gaussians(mu1, logvar1, mu2, logvar2):
         return 0.5 * torch.sum(
@@ -138,7 +137,7 @@ def train_audio_encoder_vae(img_model_name, audio_model_name, image_size, epochs
             
             # convert images for pytorch
             images = images.to(device)
-            spectrograms = spectrograms.to(device)            
+            spectrograms = spectrograms.to(device)
             img_mean, img_var = ImageEncoder.encode(images)
             
             # actual training    

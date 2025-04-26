@@ -173,7 +173,7 @@ def train_audio_vqvae(model_name, load=False, epochs=500):
             last_saved += 1
         
         # Infrequent backups
-        if epoch > 0 and epoch % 50 == 0:
+        if epoch > 0 and epoch % 25 == 0:
             try:
                 torch.save(model.state_dict(), join(root, "models", f"BACKUP{epoch}-{model_name}"))
             except:
