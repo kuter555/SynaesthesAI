@@ -216,7 +216,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     # Traino on audio this time
     last_save = 0
     print("Conditioning top GPT...")
-    for epoch in range(num_epochs // 2):
+    for epoch in range(num_epochs):
         for i, (inputs, _, audio) in enumerate(loaders["t_audio"]):
             print_progress_bar(epoch, i, len(loaders["t_audio"]))
             inputs, _, audio = inputs.to(device).long(), _.to(device).long(), audio.to(device)
@@ -255,7 +255,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
 
     last_save = 0
     # condition the bottom GPT
-    for epoch in range(num_epochs // 2):
+    for epoch in range(num_epochs):
         for i, (top_seq, bottom_inputs, bottom_targets, audio) in enumerate(loaders["b_audio"]):
             print_progress_bar(epoch, i, len(loaders["b_audio"]))
 
