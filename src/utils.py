@@ -398,11 +398,11 @@ def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, 
         stored_latent_t = []
         stored_latent_b = []
         stored_audio = []
-        print("Dataloader Length: ", len(dataloader))
+        print("Dataset Length: ", len(dataset))
         for i, (audio, images) in enumerate(dataloader):
             
             print_progress_bar("Extracting", i, len(dataloader))
-            
+            audio = audio.to(device)
             images = images.to(device)
             _, _, _, index_t, index_b = model.encode(images)
             _, indices, _ = audio_model.encode(audio)
