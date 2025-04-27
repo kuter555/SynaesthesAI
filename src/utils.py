@@ -231,7 +231,6 @@ class CustomImageFolder(Dataset):
     def __len__(self):
         return len(self.image_files)
     
-    
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
         try:
