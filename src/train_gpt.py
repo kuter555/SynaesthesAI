@@ -98,11 +98,11 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
 
     # Load latents
     try:
-        t_latents_tensor = load_tensor(os.path.join(root, "models", t_latents), device)
-        b_latents_tensor = load_tensor(os.path.join(root, "models", b_latents), device)
-        t_audio_tensor = load_tensor(os.path.join(root, "models", "audio_" + t_latents), device)
-        b_audio_tensor = load_tensor(os.path.join(root, "models", "audio_" + b_latents), device)
-        audio_info = load_tensor(os.path.join(root, "models/GPT", output_path, "audio.pt"), device)
+        t_latents_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, t_latents), device)
+        b_latents_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path,b_latents), device)
+        t_audio_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, "audio_" + t_latents), device)
+        b_audio_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, "audio_" + b_latents), device)
+        audio_info = load_tensor(os.path.join(root, "models", "GPT", output_path, "audio.pt"), device)
     except Exception as e:
         print(f"Failed loading latents: {e}")
         return -1
