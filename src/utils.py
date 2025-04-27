@@ -248,8 +248,9 @@ class CustomImageFolder(Dataset):
 
 class CustomAudioFolder(Dataset):
     
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, size=-1):
         
+        self.size = size
         self.root_dir = root_dir
         self.spectrograms = []
                 
@@ -271,7 +272,6 @@ class CustomAudioFolder(Dataset):
         audio_path = self.spectrograms[idx]
         try:
             target_width = 430
-            
             spectrogram = np.load(audio_path)
             spectrogram = from_numpy(spectrogram).float()  # convert to tensor
 
@@ -283,15 +283,21 @@ class CustomAudioFolder(Dataset):
             spectrogram = spectrogram.repeat(1, 3, 1, 1)
             spectrogram = spectrogram.squeeze(0)    
             
-            
-            if spectrogram.shape[-1] > target_width:
-                spectrogram = spectrogram[..., :target_width]
-            elif spectrogram.shape[-1] < target_width:
-                spectrogram = F.pad(spectrogram, (0, target_width - spectrogram.shape[-1]))
+            if self.size != -1:
+                spectrogram = F.interpolate(spectrogram, size=(self.size, self.size), mode='bilinear', align_corners=False)
+                spectrogram = spectrogram.repeat(1, 3, 1, 1)
+                spectrogram = spectrogram.squeeze(0)
+                
+            else:
+                if spectrogram.shape[-1] > target_width:
+                    spectrogram = spectrogram[..., :target_width]
+                elif spectrogram.shape[-1] < target_width:
+                    spectrogram = F.pad(spectrogram, (0, target_width - spectrogram.shape[-1]))
             
             return spectrogram
         
-        except:
+        except Exception as e:
+            print(f"Here is an error: {e}")
             return self.__getitem__((idx + 1) % len(self))
 
 
@@ -409,7 +415,7 @@ def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, 
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
     stored_audio = torch.cat(stored_audio, dim=0)
         
-    head_path = os.path.join(root, "models", "LSTM", output_path)
+    head_path = os.path.join(root, "models", "GPT", output_path)
         
     torch.save(stored_latent_t, os.path.join(head_path, t_latent_name))
     torch.save(stored_latent_b, os.path.join(head_path, b_latent_name))
@@ -475,13 +481,13 @@ def extract_latent_codes(model_path, t_latent_name, b_latent_name, image_size, o
     
     print("Beginning Extraction")
     
-    dataset = CustomImageFolder(f"{root}/data/downloaded_images", size=image_size)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8, pin_memory=True)
+    dataset = CustomImageFolder(os.path.join(root, "data/downloaded_images"), image_size=image_size)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=8, pin_memory=False)
     
-    model = VQVAE()
+    model = VQVAE2()
     print("Loading Model Dict")
     try:
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.load_state_dict(torch.load(os.path.join(root, "models", model_path), map_location=device))
     except:
         try:
             checkpoint = torch.load(model_path, map_location=device)
@@ -509,8 +515,8 @@ def extract_latent_codes(model_path, t_latent_name, b_latent_name, image_size, o
     stored_latent_b = torch.cat(stored_latent_b, dim=0)
     stored_latent_t = torch.cat(stored_latent_t, dim=0)
         
-    torch.save(stored_latent_t, f"{root}/{output_path}/{t_latent_name}")
-    torch.save(stored_latent_b, f"{root}/{output_path}/{b_latent_name}")
+    torch.save(stored_latent_t, os.path.join(root, "models", output_path, t_latent_name))
+    torch.save(stored_latent_b, os.path.join(root, "models", output_path, b_latent_name))
             
     print("Latents successfully saved!")
 

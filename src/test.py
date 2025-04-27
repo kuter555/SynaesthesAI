@@ -2,7 +2,12 @@ import os
 import torch
 from networks import VAE, VQVAE, VQVAE2
 from PIL import Image
-from utils import deconvolve, CustomImageFolder, CustomAudioImagePairing
+from utils import (
+    deconvolve,
+    CustomImageFolder,
+    CustomAudioImagePairing,
+    CustomAudioFolder,
+)
 import numpy as np
 import traceback
 import cv2
@@ -12,25 +17,27 @@ root = "C:/Users/chwah/Dropbox/Family/Christopher/University/Y3/Year Long Projec
 
 
 def test_vqvae(input_model, model_type, image_size):
-    
+
     model_name = input_model.split("/")[-1].split(".")[0]
-    
+
     model_path = os.path.join(root, "models", input_model)
-    if not os.path.exists(model_path):    
+    if not os.path.exists(model_path):
         print("Model not found.")
         return
-    
+
     dataset = CustomImageFolder(f"{root}/data/test_images", image_size)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
+    dataloader = torch.utils.data.DataLoader(
+        dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True
+    )
 
     if model_type == VAE:
         model = model_type(model_image_size=image_size)
     else:
         model = model_type()
-    
+
     try:
         model.load_state_dict(torch.load(model_path, map_location=device))
-    except Exception as e:        
+    except Exception as e:
         try:
             checkpoint = torch.load(model_path, map_location=device)
             model.load_state_dict(checkpoint["vqgan"])
@@ -38,55 +45,67 @@ def test_vqvae(input_model, model_type, image_size):
             print(f"Unable to load model: {e}. Exiting...")
             traceback.print_exc()
             return
-    
-    
+
     model.to(device)
-    
+
     for i, (images, _) in enumerate(dataloader):
         images = images.to(device)
-        
-        if model_type==VAE:
+
+        if model_type == VAE:
             recon_images, _, _ = model(images)
-        else:    
+        else:
             recon_images, _ = model(images)
-            
-        for i in range(len(recon_images)):        
-            Image.fromarray((deconvolve(recon_images[i].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}/data/outputs/{model_name}.jpeg")
+
+        for i in range(len(recon_images)):
+            Image.fromarray(
+                (
+                    deconvolve(
+                        recon_images[i].cpu().detach().numpy().squeeze()
+                    ).transpose(1, 2, 0)
+                    * 255
+                ).astype(np.uint8)
+            ).save(f"{root}/data/outputs/{model_name}.jpeg")
 
 
+def test_audio_vqvae(root, audio_model, image_model, size=256):
 
+    audio_path = os.path.join(root, "models", audio_model)
+    image_path = os.path.join(root, "models", image_model)
 
-
-def test_audio_vqvae(root, audio_model, image_model):
-    if not os.path.exists(audio_model) or not os.path.exists(image_model):    
+    if not os.path.exists(audio_path) or not os.path.exists(image_path):
         print("Model not found.")
         return
-    dataset = CustomAudioImagePairing(f"{root}data/downloaded_images/", f"{root}data/spectrograms")
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
+    dataset = CustomAudioImagePairing(
+        os.path.join(root, "data/downloaded_images"),
+        os.path.join(root, "data/spectrograms"),
+        size,
+    )
+    dataloader = torch.utils.data.DataLoader(
+        dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=False
+    )
 
     image_vae = VQVAE2()
     image_vae.to(device)
-    image_vae.load_state_dict(torch.load(image_model, map_location=device))
-    
+    image_vae.load_state_dict(torch.load(image_path, map_location=device))
+
     audio_vae = VQVAE2()
     audio_vae.to(device)
-    audio_vae.load_state_dict(torch.load(audio_model, map_location=device))
-    
-    
-    for epoch in range(1):
-        for i, (spectrograms, images) in enumerate(dataloader):
-            
-            # SHOULD SET IT SO THAT I USE THE EMBEDDING
-            audio_t, audio_b, _, _, _ = audio_vae.encode(spectrograms)
-            
-            
-            
-            image_output = image_vae.decode(audio_t, audio_b)
-    
-            Image.fromarray((deconvolve(image_output[0].cpu().detach().numpy().squeeze()).transpose(1,2,0) * 255).astype(np.uint8)).save(f"{root}data/outputs/first_audio_test{i}.jpeg")
+    audio_vae.load_state_dict(torch.load(audio_path, map_location=device))
 
-    
-    
+    for epoch in range(1):
+        for i, (spectrograms, _) in enumerate(dataloader):
+
+            audio_t, audio_b, _, _, _ = audio_vae.encode(spectrograms)
+            image_output = image_vae.decode(audio_t, audio_b)
+            Image.fromarray(
+                (
+                    deconvolve(
+                        image_output[0].cpu().detach().numpy().squeeze()
+                    ).transpose(1, 2, 0)
+                    * 255
+                ).astype(np.uint8)
+            ).save(os.path.join(root, f"data/outputs/first_audio_test_{i}.jpeg"))
+
 
 def load_image(path, size=None):
     image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -96,28 +115,22 @@ def load_image(path, size=None):
 
 
 def generate_reconstruction_score(true_image, reconstruction):
-    
+
     err = np.mean((true_image - reconstruction) ** 2)
     return err
 
 
-    
 if __name__ == "__main__":
-    
-    #true = load_image(os.path.join(root, "data/ORIGINAL.png"), 128)
-    #gan64 = load_image(os.path.join(root, "data/VQGAN64.png"), 128)
-    #gan128 = load_image(os.path.join(root, "data/VQGAN128.png"), 128)
-    #gan256 = load_image(os.path.join(root, "data/VQGAN256.png"), 128)
+
+    # true = load_image(os.path.join(root, "data/ORIGINAL.png"), 128)
+    # gan64 = load_image(os.path.join(root, "data/VQGAN64.png"), 128)
+    # gan128 = load_image(os.path.join(root, "data/VQGAN128.png"), 128)
+    # gan256 = load_image(os.path.join(root, "data/VQGAN256.png"), 128)
     #
-    #print("64 Score: ", generate_reconstruction_score(true, gan64))
-    #print("128 Score: ", generate_reconstruction_score(true, gan128))
-    #print("256 Score: ", generate_reconstruction_score(true, gan256))
-    
-    
-    
-    
-    audio_model = "models/audioVAE.pth"
-        
+    # print("64 Score: ", generate_reconstruction_score(true, gan64))
+    # print("128 Score: ", generate_reconstruction_score(true, gan128))
+    # print("256 Score: ", generate_reconstruction_score(true, gan256))
+
     while True:
         answer = input("Do you want to test image [1] or audio [2]?: ").strip()
         if answer in ["1", "2"]:
@@ -125,12 +138,17 @@ if __name__ == "__main__":
         print("Invalid input. Please enter 1 or 2.")
 
     if answer == "2":
-        test_audio_vqvae(root, "/models/audioVAE.pth", "/models/vae.pth")
+
+        # audio_model = input("What is the name of your audio model?: ")
+        # image_model = input("What is the name of your image model?: ")
+        test_audio_vqvae(
+            root, "AUDIO-ENCODING/AUDIO-VQVAE2-256.pth", "256x256/VQVAE2-256.pth"
+        )
     else:
-        
+
         model_files = []
         model_dir = os.path.join(root, "models")
-        
+
         # Recursively find all .pth files in subdirectories
         for subdir, _, files in os.walk(model_dir):
             for file in files:
@@ -147,15 +165,23 @@ if __name__ == "__main__":
                 print(f"  - {f}")
 
             while True:
-                selected = input("Enter the name of your VAE model from the list above: ").strip()
+                selected = input(
+                    "Enter the name of your VAE model from the list above: "
+                ).strip()
                 break
 
             if selected == "all":
                 for i in range(len(model_files)):
                     print("Testing model: ", model_files[i])
                     selected = model_files[i]
-                    size = int(input("Please enter the size of these images (max 256): ").strip())
-                    model = input("Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: ")
+                    size = int(
+                        input(
+                            "Please enter the size of these images (max 256): "
+                        ).strip()
+                    )
+                    model = input(
+                        "Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: "
+                    )
                     if model == "-1":
                         continue
                     try:
@@ -171,7 +197,11 @@ if __name__ == "__main__":
             else:
                 while True:
                     try:
-                        size = int(input("Please enter the size of your images (max 256): ").strip())
+                        size = int(
+                            input(
+                                "Please enter the size of your images (max 256): "
+                            ).strip()
+                        )
                         if 0 < size <= 256:
                             break
                         else:
@@ -179,9 +209,10 @@ if __name__ == "__main__":
                     except ValueError:
                         print("Invalid input. Please enter a whole number.")
 
-
                 while True:
-                    model = input("Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: ")
+                    model = input(
+                        "Are you testing a VAE [1], VQVAE [2], or VQVAE2 [3]?: "
+                    )
                     if model == "1":
                         test_vqvae(selected, VAE, image_size=size)
                         break
