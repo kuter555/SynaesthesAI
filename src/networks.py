@@ -280,8 +280,8 @@ class AudioLatentGPT(nn.Module):
             input_ids = image_tokens[:, :-1]
             target_ids = image_tokens
 
-        outputs = self.transformer(input_ids, labels=target_ids)
-        return outputs.logits, outputs.loss
+        outputs = self.transformer(input_ids)
+        return outputs.logits
 
 
 class AudioBottomGPT(nn.Module):

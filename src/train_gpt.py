@@ -132,7 +132,11 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
             for i, (inputs, target) in enumerate(loaders["t"]):
                 print_progress_bar(epoch, i, len(loaders["t"]))
                 inputs, target = inputs.to(device).long(), target.to(device).long()
-                logits, loss = t_model(inputs)
+                logits = t_model(inputs)
+
+                loss = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)), target.view(-1)
+                )
 
                 loss.backward()
                 t_optimiser.step()
