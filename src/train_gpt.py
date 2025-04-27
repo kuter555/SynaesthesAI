@@ -66,25 +66,31 @@ def maybe_generate_latents(model_name, audio_filename, t_audio_latents, b_audio_
         create_folder(os.path.join(root, "models", "GPT", output_path))
         extract_audio_latent_codes_gpt(model_name, audio_filename, t_audio_latents, b_audio_latents, size, output_path)
 
-def prepare_dataloaders(t_latents, b_latents, t_audio_latents, b_audio_latents, audio_info, batch_size=32):
+def prepare_dataloaders(mode, t_latents, b_latents, t_audio_latents, b_audio_latents, audio_info, batch_size=32):
     """Setup DataLoaders for top and bottom latents."""
-    top_seq = t_latents.view(t_latents.size(0), -1)
-    bottom_seq = b_latents.view(b_latents.size(0), -1)
-    top_audio_seq = t_audio_latents.view(t_audio_latents.size(0), -1)
-    bottom_audio_seq = b_audio_latents.view(b_audio_latents.size(0), -1)
     
-    t_audio_dataset = AudioLatentDataset(top_audio_seq, audio_info)
-    b_audio_dataset = AudioHierarchicalLatentDataset(top_audio_seq, bottom_audio_seq, audio_info)
-    t_dataset = LatentDataset(top_seq)
-    b_dataset = HierarchicalLatentDataset(top_seq, bottom_seq)
+    if mode == "t":
+        top_seq = t_latents.view(t_latents.size(0), -1)
+        t_dataset = LatentDataset(top_seq)
+        return DataLoader(t_dataset, batch_size=batch_size, shuffle=True),
+        
+    elif mode == "b":    
+        bottom_seq = b_latents.view(b_latents.size(0), -1)
+        b_dataset = HierarchicalLatentDataset(top_seq, bottom_seq)
+        return DataLoader(b_dataset, batch_size=batch_size, shuffle=True),
     
-    return {
-        "t_audio": DataLoader(t_audio_dataset, batch_size=batch_size, shuffle=True),
-        "b_audio": DataLoader(b_audio_dataset, batch_size=batch_size, shuffle=True),
-        "t": DataLoader(t_dataset, batch_size=batch_size, shuffle=True),
-        "b": DataLoader(b_dataset, batch_size=batch_size, shuffle=True),
-    }
+    elif mode == "b_audio":
+        bottom_audio_seq = b_audio_latents.view(b_audio_latents.size(0), -1)
+        b_audio_dataset = AudioHierarchicalLatentDataset(top_audio_seq, bottom_audio_seq, audio_info)
+        return DataLoader(b_audio_dataset, batch_size=batch_size, shuffle=True),
+     
+    elif mode == "t_audio":
+        top_audio_seq = t_audio_latents.view(t_audio_latents.size(0), -1)
+        t_audio_dataset = AudioLatentDataset(top_audio_seq, audio_info)
+        return DataLoader(t_audio_dataset, batch_size=batch_size, shuffle=True),
     
+    else:
+        raise ValueError("Inputted mode not recognised. Must be one of: ['t', 'b', 't_audio', 'b_audio']")
 
 def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs=1000, load_top=False):
     audio_filename = input("What is your audio model name?: ")
@@ -116,7 +122,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     create_folder(os.path.join(root, "models", "GPT", output_path))
 
     # Setup dataloaders
-    loaders = prepare_dataloaders(t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
+    t_dataloader = prepare_dataloaders("t", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
 
     # Setup models and optimizers
     vocab_size = vqvae_model.num_embeddings
@@ -130,8 +136,8 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
         
         print("Training top GPT...")
         for epoch in range(num_epochs):
-            for i, (inputs, target) in enumerate(loaders["t"]):
-                print_progress_bar(epoch, i, len(loaders["t"]))
+            for i, (inputs, target) in enumerate(t_dataloader):
+                print_progress_bar(epoch, i, len(t_dataloader))
                 inputs, target = inputs.to(device).long(), target.to(device).long()
                 logits, loss = t_model(inputs)
                 loss.backward()
@@ -170,11 +176,13 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
         t_model.load_state_dict(torch.load(os.path.join(root,"models","GPT",output_path,f"BACKUP{0}-t_gpt.pth"), map_location=device))
 
 
+    b_dataloader = prepare_dataloaders("b", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
+
     last_save = 0
     # train the bottom GPT
     for epoch in range(num_epochs):
-        for i, (inputs, target) in enumerate(loaders["b"]):
-            print_progress_bar(epoch, i, len(loaders["b"]))
+        for i, (inputs, target) in enumerate(b_dataloader):
+            print_progress_bar(epoch, i, len(b_dataloader))
 
             inputs, target = inputs.to(device), target.to(device)
             logits, loss = b_model(inputs)
@@ -207,12 +215,16 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
 
         torch.cuda.empty_cache()
         
+    
+    t_audio_dataloader = prepare_dataloaders("t_audio", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
+
+        
     # Traino on audio this time
     last_save = 0
     print("Conditioning top GPT...")
     for epoch in range(num_epochs):
-        for i, (inputs, _, audio) in enumerate(loaders["t_audio"]):
-            print_progress_bar(epoch, i, len(loaders["t_audio"]))
+        for i, (inputs, _, audio) in enumerate(t_audio_dataloader):
+            print_progress_bar(epoch, i, len(t_audio_dataloader))
             inputs, _, audio = inputs.to(device).long(), _.to(device).long(), audio.to(device)
             logits, loss = t_model(inputs, audio)
             loss.backward()
@@ -247,11 +259,14 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
                 print(f"Couldn't save top GPT backup: {e}")
         torch.cuda.empty_cache()
 
+    
+    b_audio_dataloader = prepare_dataloaders("b_audio", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
+
     last_save = 0
     # condition the bottom GPT
     for epoch in range(num_epochs):
-        for i, (top_seq, bottom_inputs, bottom_targets, audio) in enumerate(loaders["b_audio"]):
-            print_progress_bar(epoch, i, len(loaders["b_audio"]))
+        for i, (top_seq, bottom_inputs, bottom_targets, audio) in enumerate(b_audio_dataloader):
+            print_progress_bar(epoch, i, len(b_audio_dataloader))
 
             bottom_inputs, target, audio = bottom_inputs.to(device), top_seq.to(device), audio.to(device)
             logits, loss = b_model(bottom_inputs, top_seq, audio)
