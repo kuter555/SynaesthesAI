@@ -167,13 +167,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
 
     else:
         print("Loading top GPT")
-        t_model.load_state_dict(os.path.join(
-                            root,
-                            "models",
-                            "GPT",
-                            output_path,
-                            f"BACKUP{0}-t_gpt.pth",
-                        ))
+        t_model.load_state_dict(torch.load(os.path.join(root,"models","GPT",output_path,f"BACKUP{0}-t_gpt.pth"), map_location=device))
 
 
     last_save = 0
