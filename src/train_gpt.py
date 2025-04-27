@@ -125,8 +125,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     create_folder(os.path.join(root, "models", "GPT", output_path))
 
     # Setup dataloaders
-    t_dataloader = prepare_dataloaders("t", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
-
+    
     # Setup models and optimizers
     vocab_size = vqvae_model.num_embeddings
     t_model = AudioLatentGPT(vocab_size).to(device)
@@ -136,7 +135,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     b_optimiser = torch.optim.Adam(b_model.parameters(), lr=lr)
     last_save=  0
     if load_top == False:
-        
+        t_dataloader = prepare_dataloaders("t", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
         print("Training top GPT...")
         for epoch in range(num_epochs):
             for i, (inputs, target) in enumerate(t_dataloader):
