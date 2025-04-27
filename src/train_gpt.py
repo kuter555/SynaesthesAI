@@ -488,10 +488,9 @@ if __name__ == "__main__":
             while True:
                 Load = input("Load existing top [1] or new top [2]? ").strip()
                 if Load in ["1", "2"]:
-                    Load = answer == "1"
+                    Load = Load == "1"
                     break
                 print("Invalid input. Please enter 1 or 2.")
-
             while True:
                 model_type = input(
                     "What model? VAE [1], or VQVAE2/VQGAN-FT [2], or non-audio [3]?: "
