@@ -405,7 +405,7 @@ def extract_audio_latent_codes_gpt(model_path, audio_model_path, t_latent_name, 
             audio = audio.to(device)
             images = images.to(device)
             _, _, _, index_t, index_b = model.encode(images)
-            _, indices, _ = audio_model.encode(audio)
+            _, _, indices, _ = audio_model.encode(audio)
 
             stored_latent_t.append(index_t.cpu())
             stored_latent_b.append(index_b.cpu())
