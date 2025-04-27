@@ -176,8 +176,8 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
         for i, (inputs, target) in enumerate(loaders["b"]):
             print_progress_bar(epoch, i, len(loaders["b"]))
 
-            inputs, target = inputs.to(device), target.to(device), top_seq.to(device)
-            logits, loss = b_model(inputs, top_seq)
+            inputs, target = inputs.to(device), target.to(device)
+            logits, loss = b_model(inputs)
             loss.backward()
             b_optimiser.step()
             b_optimiser.zero_grad()
