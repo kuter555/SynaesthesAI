@@ -298,24 +298,20 @@ class AudioBottomGPT(nn.Module):
         )
         self.transformer = GPT2LMHeadModel(config)
 
-    def forward(self, bottom_image_tokens, top_image_tokens, audio_tokens=None):
+    def forward(self, bottom_image_tokens, audio_tokens=None):
 
         if audio_tokens:
             input_ids = torch.cat(
-                [audio_tokens, top_image_tokens, bottom_image_tokens[:, :-1]], dim=1
+                [audio_tokens, bottom_image_tokens[:, :-1]], dim=1
             )
             target_ids = torch.cat(
-                [torch.full_like(audio_tokens, -100),torch.full_like(top_image_tokens, -100),bottom_image_tokens[:, 1:],
+                [torch.full_like(audio_tokens, -100),bottom_image_tokens[:, 1:],
                 ],
                 dim=1,
             )
         else:
-            input_ids = torch.cat(
-                [top_image_tokens, bottom_image_tokens[:, :-1]], dim=1
-            )
-            target_ids = torch.cat(
-                [torch.full_like(top_image_tokens, -100), bottom_image_tokens[:, 1:]], dim=1
-            )
+            input_ids = bottom_image_tokens[:, :-1]
+            target_ids = bottom_image_tokens[:, 1:]
 
         outputs = self.transformer(input_ids, labels=target_ids)
         return outputs.logits, outputs.loss
