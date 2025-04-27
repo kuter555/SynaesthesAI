@@ -305,10 +305,7 @@ class AudioBottomGPT(nn.Module):
                 [audio_tokens, top_image_tokens, bottom_image_tokens[:, :-1]], dim=1
             )
             target_ids = torch.cat(
-                [
-                    torch.full_like(audio_tokens, -100),
-                    torch.full_like(top_image_tokens, -100),
-                    bottom_image_tokens,
+                [torch.full_like(audio_tokens, -100),torch.full_like(top_image_tokens, -100),bottom_image_tokens[:, 1:],
                 ],
                 dim=1,
             )
@@ -317,7 +314,7 @@ class AudioBottomGPT(nn.Module):
                 [top_image_tokens, bottom_image_tokens[:, :-1]], dim=1
             )
             target_ids = torch.cat(
-                [torch.full_like(top_image_tokens, -100), bottom_image_tokens], dim=1
+                [torch.full_like(top_image_tokens, -100), bottom_image_tokens[:, 1:]], dim=1
             )
 
         outputs = self.transformer(input_ids, labels=target_ids)
