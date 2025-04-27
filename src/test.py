@@ -142,7 +142,7 @@ if __name__ == "__main__":
         # audio_model = input("What is the name of your audio model?: ")
         # image_model = input("What is the name of your image model?: ")
         test_audio_vqvae(
-            root, "AUDIO-ENCODING/AUDIO-VQVAE2-256.pth", "256x256/VQVAE2-256.pth"
+            root, "AUDIO-VQVAE2-256.pth", "256x256/VQVAE2-256.pth"
         )
     else:
 

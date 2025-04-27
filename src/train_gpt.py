@@ -168,11 +168,11 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     last_save = 0
     # train the bottom GPT
     for epoch in range(num_epochs):
-        for i, (input, target) in enumerate(loaders["b"]):
+        for i, (inputs, target) in enumerate(loaders["b"]):
             print_progress_bar(epoch, i, len(loaders["b"]))
 
-            input, target = input.to(device), target.to(device)
-            logits, loss = b_model(input)
+            inputs, target = inputs.to(device), target.to(device)
+            logits, loss = b_model(inputs)
 
             loss = F.cross_entropy(
                 logits.view(-1, logits.size(-1)), target.view(-1), ignore_index=-100
@@ -253,8 +253,8 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
         for i, (top_seq, bottom_inputs, bottom_targets, audio) in enumerate(loaders["b_audio"]):
             print_progress_bar(epoch, i, len(loaders["b_audio"]))
 
-            input, target, audio = input.to(device), target.to(device), audio.to(device)
-            logits, loss = b_model(input, top_seq, audio)
+            bottom_inputs, target, audio = bottom_inputs.to(device), top_seq.to(device), audio.to(device)
+            logits, loss = b_model(bottom_inputs, top_seq, audio)
             loss.backward()
             b_optimiser.step()
             b_optimiser.zero_grad()
