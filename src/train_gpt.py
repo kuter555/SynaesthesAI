@@ -72,22 +72,25 @@ def prepare_dataloaders(mode, t_latents, b_latents, t_audio_latents, b_audio_lat
     if mode == "t":
         top_seq = t_latents.view(t_latents.size(0), -1)
         t_dataset = LatentDataset(top_seq)
-        return DataLoader(t_dataset, batch_size=batch_size, shuffle=True),
+        return DataLoader(t_dataset, batch_size=batch_size, shuffle=True)
         
     elif mode == "b":    
+        top_seq = t_latents.view(t_latents.size(0), -1)
         bottom_seq = b_latents.view(b_latents.size(0), -1)
         b_dataset = HierarchicalLatentDataset(top_seq, bottom_seq)
-        return DataLoader(b_dataset, batch_size=batch_size, shuffle=True),
-    
-    elif mode == "b_audio":
-        bottom_audio_seq = b_audio_latents.view(b_audio_latents.size(0), -1)
-        b_audio_dataset = AudioHierarchicalLatentDataset(top_audio_seq, bottom_audio_seq, audio_info)
-        return DataLoader(b_audio_dataset, batch_size=batch_size, shuffle=True),
+        return DataLoader(b_dataset, batch_size=batch_size, shuffle=True)
      
     elif mode == "t_audio":
         top_audio_seq = t_audio_latents.view(t_audio_latents.size(0), -1)
         t_audio_dataset = AudioLatentDataset(top_audio_seq, audio_info)
-        return DataLoader(t_audio_dataset, batch_size=batch_size, shuffle=True),
+        return DataLoader(t_audio_dataset, batch_size=batch_size, shuffle=True)
+    
+    
+    elif mode == "b_audio":
+        top_audio_seq = t_audio_latents.view(t_audio_latents.size(0), -1)
+        bottom_audio_seq = b_audio_latents.view(b_audio_latents.size(0), -1)
+        b_audio_dataset = AudioHierarchicalLatentDataset(top_audio_seq, bottom_audio_seq, audio_info)
+        return DataLoader(b_audio_dataset, batch_size=batch_size, shuffle=True)
     
     else:
         raise ValueError("Inputted mode not recognised. Must be one of: ['t', 'b', 't_audio', 'b_audio']")
