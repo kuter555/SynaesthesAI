@@ -126,7 +126,8 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     t_optimiser = torch.optim.Adam(t_model.parameters(), lr=lr)
     b_optimiser = torch.optim.Adam(b_model.parameters(), lr=lr)
     last_save=  0
-    if not load_top:
+    if load_top == False:
+        
         print("Training top GPT...")
         for epoch in range(num_epochs):
             for i, (inputs, target) in enumerate(loaders["t"]):
@@ -137,7 +138,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
                 t_optimiser.step()
                 t_optimiser.zero_grad()
 
-            if last_save > 20:
+            if last_save > 2:
                 try:
                     torch.save(
                         t_model.state_dict(),
@@ -164,6 +165,17 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
                     print(f"Couldn't save top GPT backup: {e}")
             torch.cuda.empty_cache()
 
+    else:
+        print("Loading top GPT")
+        t_model.load_state_dict(os.path.join(
+                            root,
+                            "models",
+                            "GPT",
+                            output_path,
+                            f"BACKUP{0}-t_gpt.pth",
+                        ))
+
+
     last_save = 0
     # train the bottom GPT
     for epoch in range(num_epochs):
@@ -171,17 +183,12 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
             print_progress_bar(epoch, i, len(loaders["b"]))
 
             inputs, target = inputs.to(device), target.to(device)
-            logits, loss = b_model(inputs)
-
-            loss = F.cross_entropy(
-                logits.view(-1, logits.size(-1)), target.view(-1), ignore_index=-100
-            )
-
+            logits, loss = b_model(bottom_inputs, top_seq)
             loss.backward()
             b_optimiser.step()
             b_optimiser.zero_grad()
 
-        if last_save > 20:
+        if last_save > 2:
             try:
                 torch.save(
                     b_model.state_dict(),
@@ -209,7 +216,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
     # Traino on audio this time
     last_save = 0
     print("Conditioning top GPT...")
-    for epoch in range(num_epochs):
+    for epoch in range(num_epochs // 2):
         for i, (inputs, _, audio) in enumerate(loaders["t_audio"]):
             print_progress_bar(epoch, i, len(loaders["t_audio"]))
             inputs, _, audio = inputs.to(device).long(), _.to(device).long(), audio.to(device)
@@ -218,7 +225,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
             t_optimiser.step()
             t_optimiser.zero_grad()
         
-        if last_save > 20:
+        if last_save > 2:
             try:
                 torch.save(
                     t_model.state_dict(),
@@ -248,7 +255,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
 
     last_save = 0
     # condition the bottom GPT
-    for epoch in range(num_epochs):
+    for epoch in range(num_epochs // 2):
         for i, (top_seq, bottom_inputs, bottom_targets, audio) in enumerate(loaders["b_audio"]):
             print_progress_bar(epoch, i, len(loaders["b_audio"]))
 
