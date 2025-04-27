@@ -271,17 +271,18 @@ class AudioLatentGPT(nn.Module):
 
     def forward(self, image_tokens, audio_tokens=None):
 
-        if audio_tokens:
+        if audio_tokens is not None:
             input_ids = torch.cat([audio_tokens, image_tokens[:, :-1]], dim=1)
-            target_ids = torch.cat(
-                [torch.full_like(audio_tokens, -100), image_tokens], dim=1
-            )
-        else:
-            input_ids = image_tokens[:, :-1]
-            target_ids = image_tokens
+            pad = torch.full_like(audio_tokens, -100)
+            shifted_image = image_tokens[:, 1:]
+            target_ids = torch.cat([pad, shifted_image], dim=1)
 
-        outputs = self.transformer(input_ids)
-        return outputs.logits
+        else:
+            input_ids  = image_tokens[:, :-1]
+            target_ids = image_tokens[:, 1:]
+
+        outputs = self.transformer(input_ids, labels=target_ids)
+        return outputs.logits, outputs.loss
 
 
 class AudioBottomGPT(nn.Module):
