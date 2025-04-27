@@ -79,10 +79,10 @@ def prepare_dataloaders(t_latents, b_latents, t_audio_latents, b_audio_latents, 
     b_dataset = HierarchicalLatentDataset(top_seq, bottom_seq)
     
     return {
-        "t_audio": DataLoader(t_audio_dataset, batch_size=batch_size, shuffle=True),
-        "b_audio": DataLoader(b_audio_dataset, batch_size=batch_size, shuffle=True),
-        "t": DataLoader(t_dataset, batch_size=batch_size, shuffle=True),
-        "b": DataLoader(b_dataset, batch_size=batch_size, shuffle=True),
+        "t_audio": DataLoader(t_audio_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=False),
+        "b_audio": DataLoader(b_audio_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=False),
+        "t": DataLoader(t_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=False),
+        "b": DataLoader(b_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=False),
     }
     
 
