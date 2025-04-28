@@ -92,19 +92,17 @@ def test_audio_vqvae(root, audio_model, image_model, size=256):
     audio_vae.to(device)
     audio_vae.load_state_dict(torch.load(audio_path, map_location=device))
 
-    for epoch in range(1):
-        for i, (spectrograms, _) in enumerate(dataloader):
-
-            audio_t, audio_b, _, _, _ = audio_vae.encode(spectrograms)
-            image_output = image_vae.decode(audio_t, audio_b)
-            Image.fromarray(
-                (
-                    deconvolve(
-                        image_output[0].cpu().detach().numpy().squeeze()
-                    ).transpose(1, 2, 0)
-                    * 255
-                ).astype(np.uint8)
-            ).save(os.path.join(root, f"data/outputs/first_audio_test_{i}.jpeg"))
+    for i, (spectrograms, _) in enumerate(dataloader):
+        audio_t, audio_b, _, _, _ = audio_vae.encode(spectrograms)
+        image_output = image_vae.decode(audio_t, audio_b)
+        Image.fromarray(
+            (
+                deconvolve(
+                    image_output[0].cpu().detach().numpy().squeeze()
+                ).transpose(1, 2, 0)
+                * 255
+            ).astype(np.uint8)
+        ).save(os.path.join(root, f"data/outputs/first_audio_test_{i}.jpeg"))
 
 
 def load_image(path, size=None):
@@ -122,14 +120,14 @@ def generate_reconstruction_score(true_image, reconstruction):
 
 if __name__ == "__main__":
 
-    # true = load_image(os.path.join(root, "data/ORIGINAL.png"), 128)
+    #true = load_image(os.path.join(root, "data/test_images/ifiwere_beyonc.jpeg"), 256)
     # gan64 = load_image(os.path.join(root, "data/VQGAN64.png"), 128)
-    # gan128 = load_image(os.path.join(root, "data/VQGAN128.png"), 128)
-    # gan256 = load_image(os.path.join(root, "data/VQGAN256.png"), 128)
+    #vqvae256 = load_image(os.path.join(root, "data/outputs/VQVAE-256.jpeg"), 256)
+    #vqvae2256 = load_image(os.path.join(root, "data/outputs/VQVAE2-256.jpeg"), 256)
     #
     # print("64 Score: ", generate_reconstruction_score(true, gan64))
-    # print("128 Score: ", generate_reconstruction_score(true, gan128))
-    # print("256 Score: ", generate_reconstruction_score(true, gan256))
+    #print("VQVAE Score: ", generate_reconstruction_score(true, vqvae256))
+    #print("VQVAE2 Score: ", generate_reconstruction_score(true, vqvae2256))
 
     while True:
         answer = input("Do you want to test image [1] or audio [2]?: ").strip()
@@ -142,7 +140,7 @@ if __name__ == "__main__":
         # audio_model = input("What is the name of your audio model?: ")
         # image_model = input("What is the name of your image model?: ")
         test_audio_vqvae(
-            root, "AUDIO-VQVAE2-256.pth", "256x256/VQVAE2-256.pth"
+            root, "AUDIO-ENCODING/AUDIO-VQVAE2-256.pth", "256x256/VQVAE2-256.pth"
         )
     else:
 

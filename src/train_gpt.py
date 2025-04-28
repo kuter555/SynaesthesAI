@@ -95,7 +95,7 @@ def prepare_dataloaders(mode, t_latents, b_latents, t_audio_latents, b_audio_lat
     else:
         raise ValueError("Inputted mode not recognised. Must be one of: ['t', 'b', 't_audio', 'b_audio']")
 
-def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs=1000, load_top=False):
+def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs=1000, load_top=False, load_bottom=False):
     audio_filename = input("What is your audio model name?: ")
     audio_model_path = os.path.join(root, "models", audio_filename)
     audio_model = load_model(VQVAE, audio_model_path, device)
@@ -178,45 +178,51 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
         t_model.load_state_dict(torch.load(os.path.join(root,"models","GPT",output_path,f"BACKUP{0}-t_gpt.pth"), map_location=device))
 
 
-    b_dataloader = prepare_dataloaders("b", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
+    if not load_bottom:
+        print("Training Bottom GPT")
+        b_dataloader = prepare_dataloaders("b", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
 
-    last_save = 0
-    # train the bottom GPT
-    for epoch in range(num_epochs):
-        for i, (inputs, target) in enumerate(b_dataloader):
-            print_progress_bar(epoch, i, len(b_dataloader))
+        last_save = 0
+        # train the bottom GPT
+        for epoch in range(num_epochs):
+            for i, (inputs, target) in enumerate(b_dataloader):
+                print_progress_bar(epoch, i, len(b_dataloader))
 
-            inputs, target = inputs.to(device), target.to(device)
-            logits, loss = b_model(inputs)
-            loss.backward()
-            b_optimiser.step()
-            b_optimiser.zero_grad()
+                inputs, target = inputs.to(device), target.to(device)
+                logits, loss = b_model(inputs)
+                loss.backward()
+                b_optimiser.step()
+                b_optimiser.zero_grad()
 
-        if last_save > 2:
-            try:
-                torch.save(
-                    b_model.state_dict(),
-                    os.path.join(root, "models", "GPT", output_path, "b_gpt.pth"),
-                )
-                last_save = 0
-            except:
-                print("Couldn't save bottom GPT")
-        else:
-            last_save += 1
+            if last_save > 2:
+                try:
+                    torch.save(
+                        b_model.state_dict(),
+                        os.path.join(root, "models", "GPT", output_path, "b_gpt.pth"),
+                    )
+                    last_save = 0
+                except:
+                    print("Couldn't save bottom GPT")
+            else:
+                last_save += 1
 
-        if epoch % 50 == 0:
-            try:
-                torch.save(
-                    b_model.state_dict(),
-                    os.path.join(
-                        root, "models", "GPT", output_path, f"BACKUP{epoch}-b_gpt.pth"
-                    ),
-                )
-            except Exception as e:
-                print(f"Couldn't save bottom GPT backup: {e}")
+            if epoch % 50 == 0:
+                try:
+                    torch.save(
+                        b_model.state_dict(),
+                        os.path.join(
+                            root, "models", "GPT", output_path, f"BACKUP{epoch}-b_gpt.pth"
+                        ),
+                    )
+                except Exception as e:
+                    print(f"Couldn't save bottom GPT backup: {e}")
 
-        torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
         
+    else:
+        print("Loading bottom GPT")
+        b_model.load_state_dict(torch.load(os.path.join(root,"models","GPT",output_path,f"BACKUP{0}-b_gpt.pth"), map_location=device))
+
     
     t_audio_dataloader = prepare_dataloaders("t_audio", t_latents_tensor, b_latents_tensor, t_audio_tensor, b_audio_tensor, audio_info)
 
@@ -228,6 +234,9 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
         for i, (inputs, _, audio) in enumerate(t_audio_dataloader):
             print_progress_bar(epoch, i, len(t_audio_dataloader))
             inputs, _, audio = inputs.to(device).long(), _.to(device).long(), audio.to(device)
+            
+            print("Audio shape is: ", audio.shape)
+            
             logits, loss = t_model(inputs, audio)
             loss.backward()
             t_optimiser.step()
@@ -492,7 +501,7 @@ if __name__ == "__main__":
         if answer == "1":
             output_path = input("What is your desired output path?: ")
             extract_latent_codes(model_name, t_latents, b_latents, size, output_path)
-            train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs, False)
+            train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs, False, False)
             break
 
         elif answer == "2":
@@ -500,6 +509,12 @@ if __name__ == "__main__":
                 Load = input("Load existing top [1] or new top [2]? ").strip()
                 if Load in ["1", "2"]:
                     Load = Load == "1"
+                    break
+                print("Invalid input. Please enter 1 or 2.")
+            while True:
+                Load_b = input("Load existing bottom [1] or new bottom [2]? ").strip()
+                if Load_b in ["1", "2"]:
+                    Load_b = Load_b == "1"
                     break
                 print("Invalid input. Please enter 1 or 2.")
             while True:
@@ -511,7 +526,7 @@ if __name__ == "__main__":
                     break
                 elif model_type == "2":
                     train_audio_gpt_hierarchical(
-                        model_name, t_latents, b_latents, size, num_epochs, Load
+                        model_name, t_latents, b_latents, size, num_epochs, Load, Load_b
                     )
                     break
                 elif model_type == "3":

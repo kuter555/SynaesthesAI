@@ -11,3 +11,5 @@ data/test_images/
 data/errors.txt
 data/Music.csv
 models/*
+backlog/
+old_spectrogram/
