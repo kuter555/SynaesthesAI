@@ -481,7 +481,7 @@ def extract_latent_codes(model_path, t_latent_name, b_latent_name, image_size, o
     print("Beginning Extraction")
     
     dataset = CustomImageFolder(os.path.join(root, "data/downloaded_images"), image_size=image_size)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=8, pin_memory=False)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True, num_workers=8, pin_memory=False)
     
     model = VQVAE2()
     print("Loading Model Dict")

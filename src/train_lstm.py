@@ -213,7 +213,7 @@ def train_audio_lstm_hierarchical(
 
             torch.cuda.empty_cache()
 
-            if epoch % 25 == 0 and epoch > 0:
+            if epoch % 100 == 0 and epoch > 0:
                 try:
                     torch.save(
                         lstm.state_dict(),
@@ -228,7 +228,7 @@ def train_audio_lstm_hierarchical(
                 except:
                     print("Couldn't save top LSTM")
 
-            if last_saved > 20:
+            if last_saved > 133:
                 try:
                     torch.save(
                         lstm.state_dict(),
@@ -238,8 +238,14 @@ def train_audio_lstm_hierarchical(
                 except:
                     print("Couldn't save top LSTM")
             else:
-                last_saved += 1
-
+                last_saved += 1 
+                
+        
+        torch.save(
+            lstm.state_dict(),
+            join(root, "models", "LSTM", output_path, f"t_lstm.pth"),
+        )
+        
     else:
         print("Loading top")
         lstm.load_state_dict(
@@ -270,7 +276,7 @@ def train_audio_lstm_hierarchical(
             optimiser.step()
 
         torch.cuda.empty_cache()
-        if epoch % 25 == 0 and epoch > 0:
+        if epoch % 100 == 0 and epoch > 0:
             try:
                 torch.save(
                     bottom_lstm.state_dict(),
@@ -281,7 +287,7 @@ def train_audio_lstm_hierarchical(
             except:
                 print("Couldn't save bottom LSTM")
 
-        if last_saved > 15:
+        if last_saved > 133:
             try:
                 torch.save(
                     bottom_lstm.state_dict(),
@@ -292,7 +298,12 @@ def train_audio_lstm_hierarchical(
                 print("Couldn't save top LSTM")
         else:
             last_saved += 1
-
+            
+    torch.save(
+    bottom_lstm.state_dict(),
+    join(root, "models", "LSTM", output_path, f"b_lstm.pth"),
+    )
+                
 
 # ALLOWS TRAINING OF VQVAE-2 and VQGAN
 def train_vanilla_lstm_hierarchical(
