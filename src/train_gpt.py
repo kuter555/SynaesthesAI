@@ -95,20 +95,25 @@ def prepare_dataloaders(mode, t_latents, b_latents, t_audio_latents, b_audio_lat
     else:
         raise ValueError("Inputted mode not recognised. Must be one of: ['t', 'b', 't_audio', 'b_audio']")
 
-def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs=1000, load_top=False, load_bottom=False):
+def train_audio_gpt_hierarchical(model_name, size, num_epochs=1000, load_top=False, load_bottom=False):
+    
+    t_latents = "t_latents.pt"
+    b_latents = "b_latents.pt"
+    
     audio_filename = input("What is your audio model name?: ")
     audio_model_path = os.path.join(root, "models", audio_filename)
     audio_model = load_model(VQVAE, audio_model_path, device)
     if audio_model is None:
         return -1
-
-    output_path = input("What is your desired output path/where are latents stored?: ")
+    
+    output_path = model_name.split("/")[-1].split(".")[0]
+    
     maybe_generate_latents(model_name, audio_filename, "audio_" + t_latents, "audio_" + b_latents, size, output_path)
 
     # Load latents
     try:
         t_latents_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, t_latents), device)
-        b_latents_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path,b_latents), device)
+        b_latents_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, b_latents), device)
         t_audio_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, "audio_" + t_latents), device)
         b_audio_tensor = load_tensor(os.path.join(root, "models", "GPT", output_path, "audio_" + b_latents), device)
         audio_info = load_tensor(os.path.join(root, "models", "GPT", output_path, "audio.pt"), device)
@@ -236,7 +241,7 @@ def train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epo
             inputs, _, audio = inputs.to(device).long(), _.to(device).long(), audio.to(device)
             
             print("Audio shape is: ", audio.shape)
-            
+            print("Input shape is: ", inputs.shape)
             logits, loss = t_model(inputs, audio)
             loss.backward()
             t_optimiser.step()
@@ -457,22 +462,6 @@ if __name__ == "__main__":
         print("Model name cannot be empty.")
 
     while True:
-        t_latents = input("What is the name of your top latents?: ").strip()
-        if t_latents:
-            if not t_latents.endswith(".pt"):
-                t_latents += ".pt"
-            break
-        print("Top latents cannot be empty.")
-
-    while True:
-        b_latents = input("What is the name of your bottom latents?: ").strip()
-        if b_latents:
-            if not b_latents.endswith(".pt"):
-                b_latents += ".pt"
-            break
-        print("Bottom latents cannot be empty.")
-
-    while True:
         try:
             size = int(input("Enter the size of your images (max 256): ").strip())
             if 0 < size <= 256:
@@ -499,9 +488,9 @@ if __name__ == "__main__":
             "Would you like to Extract latents and train (1) or Only train the GPT (2), or Decode (3)? > "
         )
         if answer == "1":
-            output_path = input("What is your desired output path?: ")
-            extract_latent_codes(model_name, t_latents, b_latents, size, output_path)
-            train_audio_gpt_hierarchical(model_name, t_latents, b_latents, size, num_epochs, False, False)
+            output_path = "GPT/" + model_name.split("/")[-1].split(".")[0]
+            extract_latent_codes(model_name, "t_latents.pt", "b_latents.pt", size, output_path)
+            train_audio_gpt_hierarchical(model_name, size, num_epochs, False, False)
             break
 
         elif answer == "2":
@@ -526,12 +515,12 @@ if __name__ == "__main__":
                     break
                 elif model_type == "2":
                     train_audio_gpt_hierarchical(
-                        model_name, t_latents, b_latents, size, num_epochs, Load, Load_b
+                        model_name, size, num_epochs, Load, Load_b
                     )
                     break
                 elif model_type == "3":
                     train_vanilla_gpt_hierarchical(
-                        model_name, t_latents, b_latents, num_epochs, Load
+                        model_name, "t_latents.pt", "b_latents.pt", num_epochs, Load
                     )
                     break
                 else:
