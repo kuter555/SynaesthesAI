@@ -621,14 +621,14 @@ def sample_latents_with_audio(
 
 if __name__ == "__main__":
 
-    decode(
-        "128x128/VQGAN-FT128.pth",
-        "ALT_VQGAN-FT128",
-        "BACKUP900_t_lstm.pth",
-        "BACKUP900_b_lstm.pth",
-        128,
-        use_audio=True,
-    )
+    #decode(
+    #    "128x128/VQGAN-FT128.pth",
+    #    "ALT_VQGAN-FT128",
+    #    "BACKUP900_t_lstm.pth",
+    #    "BACKUP900_b_lstm.pth",
+    #    128,
+    #    use_audio=True,
+    #)
 
     while True:
         model_name = input("Please enter the name of your image model: ").strip()
