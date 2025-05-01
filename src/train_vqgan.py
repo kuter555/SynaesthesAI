@@ -22,11 +22,7 @@ use_perceptual = False # Toggle if you want to try VGG-based perceptual loss
 image_size = 256
 freeze_epochs = 10
 
-
-    
-    
 def train(model_name, vqvae_model="", load=False, image_size=256):
-
 
     vqvae = VQVAE2()
     D = Discriminator()
